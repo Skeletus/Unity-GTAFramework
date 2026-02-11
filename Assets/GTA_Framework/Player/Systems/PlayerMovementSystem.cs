@@ -33,11 +33,11 @@ namespace GTAFramework.Player.Systems
             if (_playerController == null || _inputService == null)
                 return;
 
-            // Capturar salto (solo si gameplay lo permite)
+            // Capture jump (only if stable grounded)
             if (_inputService.IsJumpPressed && _playerController.IsGroundedStable)
                 _jumpRequested = true;
 
-            // Movimiento/rotación bloqueados durante landing (y cualquier lock)
+            // Movement/rotation blocked during landing (and any lock)
             if (!_playerController.IsMovementLocked)
             {
                 HandleMovement(deltaTime);
@@ -45,13 +45,12 @@ namespace GTAFramework.Player.Systems
             }
             else
             {
-                // si estamos locked, cortamos velocidad horizontal
                 _currentVelocity = Vector3.zero;
             }
 
             HandleGravity(deltaTime);
 
-            // 3) Un solo Move final (siempre)
+            // One final Move
             Vector3 totalVelocity = _currentVelocity;
             totalVelocity.y = _verticalVelocity;
 
@@ -65,7 +64,7 @@ namespace GTAFramework.Player.Systems
 
         public void FixedTick(float fixedDeltaTime)
         {
-            // Evita duplicar gravedad aquí si ya lo haces en Tick (Update).
+            // Avoid duplicating gravity here if you already do it in Tick (Update).
         }
 
         public void Shutdown()
@@ -96,8 +95,6 @@ namespace GTAFramework.Player.Systems
                     _playerController.MovementData.deceleration * deltaTime
                 );
             }
-
-            //_playerController.Move(_currentVelocity);
         }
 
         private void HandleRotation(float deltaTime)
@@ -122,32 +119,27 @@ namespace GTAFramework.Player.Systems
 
         private void HandleGravity(float deltaTime)
         {
-            // Saltar (solo si CanJump; en landing CanJump=false)
-            if (_jumpRequested && _playerController.IsGroundedStable)
-            {
-                _verticalVelocity = Mathf.Sqrt(
-                    _playerController.MovementData.jumpHeight * -2f * _playerController.MovementData.gravity
-                );
+            var data = _playerController.MovementData;
 
+            // Jump
+            if (_jumpRequested && _playerController.CanJump)
+            {
+                _verticalVelocity = Mathf.Sqrt(data.jumpHeight * -2f * data.gravity);
                 _jumpRequested = false;
 
-                // Notificar al Agent (bool one-frame para IsJumping)
                 _playerController.NotifyJump(_verticalVelocity);
             }
 
-            if (_playerController.IsGrounded && _verticalVelocity < 0)
+            // Stick to ground on ramps/stairs
+            if (_playerController.IsGroundedContact && _verticalVelocity <= 0f)
             {
-                _verticalVelocity = -2f;
-            }
-            else
-            {
-                _verticalVelocity += _playerController.MovementData.gravity * deltaTime;
-                _verticalVelocity = Mathf.Max(_verticalVelocity, _playerController.MovementData.maxFallSpeed);
+                _verticalVelocity = -Mathf.Max(2f, data.stickToGroundForce);
+                return;
             }
 
-            // aplicar solo vertical (si no estás locked, Move ya fue aplicado horizontal)
-            // Si estás locked, Move se ignora en PlayerController y no rompe nada.
-            //_playerController.Move(new Vector3(0, _verticalVelocity, 0));
+            // Gravity in air
+            _verticalVelocity += data.gravity * deltaTime;
+            _verticalVelocity = Mathf.Max(_verticalVelocity, data.maxFallSpeed);
         }
 
         private Vector3 GetMovementDirection(Vector2 input)

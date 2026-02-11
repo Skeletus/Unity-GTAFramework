@@ -45,5 +45,24 @@ namespace GTAFramework.Player.Data
 
         [Tooltip("Maximum fall speed")]
         public float maxFallSpeed = -20f;
+
+        [Header("Grounding / Slopes")]
+        [Tooltip("Layers considered as ground for grounding checks.")]
+        public LayerMask groundMask = ~0;
+
+        [Tooltip("Extra distance (meters) to probe below the capsule for ground. Helps with ramps/stairs.")]
+        [Min(0f)] public float groundProbeDistance = 0.25f;
+
+        [Tooltip("SphereCast radius multiplier based on CharacterController.radius.")]
+        [Range(0.5f, 1.0f)] public float groundProbeRadiusFactor = 0.95f;
+
+        [Tooltip("If we are \"not grounded\" but we are within this distance to valid ground while moving down, snap down to it.")]
+        [Min(0f)] public float groundSnapDistance = 0.35f;
+
+        [Tooltip("Constant downward speed applied while grounded to keep contact on down slopes (\"stick to ground\").")]
+        [Min(0f)] public float stickToGroundForce = 5f;
+
+        [Tooltip("Small grace time after leaving ground (seconds). Prevents false falling on small steps/ramps.")]
+        [Min(0f)] public float coyoteTime = 0.08f;
     }
 }

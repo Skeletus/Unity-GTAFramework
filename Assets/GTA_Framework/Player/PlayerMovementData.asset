@@ -20,6 +20,6 @@ MonoBehaviour:
   acceleration: 10
   deceleration: 10
   rotationSpeed: 15
-  jumpHeight: 4
+  jumpHeight: 5.5
   gravity: -15
   maxFallSpeed: -20
