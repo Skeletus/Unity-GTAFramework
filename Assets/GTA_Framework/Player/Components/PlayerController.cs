@@ -46,6 +46,14 @@ namespace GTAFramework.Player.Components
         private bool _jumpPressedThisFrame;
         private float _verticalSpeed;
 
+        // Character Controller original values
+        private float _originalHeight;
+        private float _originalCenterY;
+        private float _currentHeight;
+        private float _currentCenterY;
+
+
+
         public PlayerMovementData MovementData => _movementData;
         public CharacterController CharacterController => _characterController;
         public Transform CameraTransform => _cameraTransform;
@@ -73,6 +81,14 @@ namespace GTAFramework.Player.Components
             if (Camera.main != null)
                 _cameraTransform = Camera.main.transform;
 
+            // Store original CharacterController values
+            _originalHeight = _characterController.height;
+            _originalCenterY = _characterController.center.y;
+            _currentHeight = _originalHeight;
+            _currentCenterY = _originalCenterY;
+
+
+
             RefreshCanJump();
         }
 
@@ -85,6 +101,110 @@ namespace GTAFramework.Player.Components
             // Ensure first frame has correct grounded state even before any move
             PostMoveUpdate();
         }
+
+        private void Update()
+        {
+            UpdateCrouchCollider();
+        }
+
+        /// <summary>
+        /// Updates the CharacterController collider based on crouch state
+        /// </summary>
+        private void UpdateCrouchCollider()
+        {
+            if (_movementData == null || _characterController == null)
+                return;
+
+            float targetHeight;
+            float targetCenterY;
+
+            if (IsCrouching)
+            {
+                // Calculate crouched height and center
+                targetHeight = _originalHeight * _movementData.crouchHeightMultiplier;
+                // Adjust center Y so the bottom of the capsule stays at the same position
+                float heightDifference = _originalHeight - targetHeight;
+                targetCenterY = _originalCenterY - (heightDifference * 0.5f);
+            }
+            else
+            {
+                // Return to original values
+                targetHeight = _originalHeight;
+                targetCenterY = _originalCenterY;
+
+            }
+
+            // Smoothly transition
+            float transitionSpeed = _movementData.crouchTransitionSpeed * Time.deltaTime;
+            _currentHeight = Mathf.Lerp(_currentHeight, targetHeight, transitionSpeed);
+            _currentCenterY = Mathf.Lerp(_currentCenterY, targetCenterY, transitionSpeed);
+
+            // Apply to CharacterController
+            _characterController.height = _currentHeight;
+            Vector3 center = _characterController.center;
+            center.y = _currentCenterY;
+            _characterController.center = center;
+        }
+
+        /// <summary>
+        /// Checks if there's enough space above the player to stand up
+        /// </summary>
+        public bool CanStandUp()
+        {
+            if (!IsCrouching)
+                return true;
+
+            float checkHeight = _originalHeight;
+            float currentHeight = _characterController.height;
+            float additionalHeight = checkHeight - currentHeight;
+
+            if (additionalHeight <= 0.01f)
+                return true;
+
+            // Get the current position of the character controller
+            Vector3 centerLocal = _characterController.center;
+            Vector3 centerWorld = transform.TransformPoint(centerLocal);
+            float radius = _characterController.radius * 0.95f;
+
+            // Calculate the top point of the current crouched capsule
+            float currentHalfHeight = currentHeight * 0.5f;
+            Vector3 currentTop = centerWorld + Vector3.up * (currentHalfHeight - radius);
+
+            // Distance to check (from current top to where standing top would be)
+            float checkDistance = additionalHeight + 0.1f;
+
+            Debug.Log($"CanStandUp Check - Current Height: {currentHeight:F2}, Target Height: {checkHeight:F2}, Check Distance: {checkDistance:F2}");
+            Debug.Log($"Center World: {centerWorld}, Current Top: {currentTop}, Radius: {radius:F2}");
+
+
+            // Perform a sphere cast upward from current top position
+            bool hasObstacle = Physics.SphereCast(
+                currentTop,
+                radius,
+                Vector3.up,
+                out RaycastHit hit,
+                checkDistance,
+                _movementData.groundMask,
+                QueryTriggerInteraction.Ignore
+            );
+
+            if (hasObstacle)
+            {
+                Debug.Log($"<color=red>OBSTACULO DETECTADO: {hit.collider.gameObject.name} a distancia {hit.distance:F2}</color>");
+            }
+            else
+            {
+                Debug.Log($"<color=green>NO HAY OBSTACULOS - Puede levantarse</color>");
+            }
+
+            // Debug visualization
+            Debug.DrawRay(currentTop, Vector3.up * checkDistance, hasObstacle ? Color.red : Color.green, 0.5f);
+
+            return !hasObstacle;
+
+        }
+
+
 
         /// <summary>
         /// Robust grounding:
@@ -293,7 +413,7 @@ namespace GTAFramework.Player.Components
 
         private void RefreshCanJump()
         {
-            CanJump = IsGroundedStable && !IsMovementLocked;
+            CanJump = IsGroundedStable && !IsMovementLocked && !IsCrouching;
         }
 
         // ----------------------------------------------------

@@ -16,6 +16,8 @@ namespace GTAFramework.Player.Systems
         private float _verticalVelocity;
 
         private bool _jumpRequested;
+        private bool _lastCrouchInputState;
+
 
         public void Initialize()
         {
@@ -33,6 +35,7 @@ namespace GTAFramework.Player.Systems
             if (_playerController == null || _inputService == null)
                 return;
 
+            
             // Capture jump (only if stable grounded)
             if (_inputService.IsJumpPressed && _playerController.IsGroundedStable)
                 _jumpRequested = true;
@@ -49,6 +52,9 @@ namespace GTAFramework.Player.Systems
             }
 
             HandleGravity(deltaTime);
+
+            // Handle crouching FIRST - before movement
+            HandleCrouching();
 
             // One final Move
             Vector3 totalVelocity = _currentVelocity;
@@ -142,6 +148,40 @@ namespace GTAFramework.Player.Systems
             _verticalVelocity = Mathf.Max(_verticalVelocity, data.maxFallSpeed);
         }
 
+        private void HandleCrouching()
+        {
+            bool currentInputState = _inputService.IsCrouchPressed;
+
+            // Detectar si el toggle cambió
+            if (currentInputState == _lastCrouchInputState)
+                return; // No cambió, no hacer nada
+
+            _lastCrouchInputState = currentInputState;
+
+            // Toggle crouch when C is pressed
+            if (_playerController.IsCrouching)
+            {
+                // Trying to stand up - check if there's space
+                if (_playerController.CanStandUp())
+                {
+                    _playerController.IsCrouching = false;
+                    Debug.Log("Levantándose - espacio disponible");
+                }
+                else
+                {
+                    Debug.Log("No se puede levantar - hay obstáculo arriba");
+                }
+            }
+            else
+            {
+                // Crouching down - always allowed
+                _playerController.IsCrouching = true;
+                Debug.Log("Agachándose");
+            }
+        }
+
+
+
         private Vector3 GetMovementDirection(Vector2 input)
         {
             Vector3 forward = Vector3.forward;
@@ -167,7 +207,6 @@ namespace GTAFramework.Player.Systems
 
             _playerController.IsWalking = _inputService.IsWalkPressed;
             _playerController.IsSprinting = _inputService.IsSprintPressed;
-            _playerController.IsCrouching = _inputService.IsCrouchPressed;
 
             if (_playerController.IsWalking)
                 return data.slowWalkingSpeed;

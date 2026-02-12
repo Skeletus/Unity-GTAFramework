@@ -64,5 +64,14 @@ namespace GTAFramework.Player.Data
 
         [Tooltip("Small grace time after leaving ground (seconds). Prevents false falling on small steps/ramps.")]
         [Min(0f)] public float coyoteTime = 0.08f;
+
+
+        [Header("Crouch Settings")]
+        [Tooltip("Height multiplier when crouched (e.g., 0.5 = half height)")]
+        [Range(0.3f, 0.9f)] public float crouchHeightMultiplier = 0.5f;
+
+        [Tooltip("How fast the character controller transitions between standing and crouching")]
+        [Range(1f, 20f)] public float crouchTransitionSpeed = 10f;
+ 
     }
 }
