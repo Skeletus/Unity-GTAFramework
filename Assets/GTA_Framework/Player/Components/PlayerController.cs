@@ -2,11 +2,12 @@
 using GTAFramework.Player.Data;
 using GTAFramework.GTA_Animation.Components;
 using GTAFramework.Player.Components.States;
+using GTAFramework.Vehicle.Interfaces;
 
 namespace GTAFramework.Player.Components
 {
     [RequireComponent(typeof(CharacterController))]
-    public class PlayerController : MonoBehaviour, CharacterAnimationAgent.ICharacterAnimationSource
+    public class PlayerController : MonoBehaviour, CharacterAnimationAgent.ICharacterAnimationSource, IDriver
     {
         [Header("References")]
         [SerializeField] private PlayerMovementData _movementData;
@@ -75,6 +76,11 @@ namespace GTAFramework.Player.Components
         private bool _jumpPressedThisFrame;
         private float _verticalSpeed;
 
+        // ========== VEHICLE ==========
+        private IVehicle _currentVehicle;
+        public IVehicle CurrentVehicle => _currentVehicle;
+        public bool IsInVehicle => _currentVehicle != null;
+
         // ========== PUBLIC PROPERTIES ==========
         public PlayerMovementData MovementData => _movementData;
         public CharacterController CharacterController => _characterController;
@@ -94,6 +100,8 @@ namespace GTAFramework.Player.Components
         }
 
         public bool IsMovementLocked => MovementLocked || _landingLocked;
+
+        public Transform Transform => transform;
 
         // ========== UNITY LIFECYCLE ==========
         private void Awake()
@@ -283,6 +291,50 @@ namespace GTAFramework.Player.Components
         public void Anim_Land_End()
         {
             _landingLocked = false;
+        }
+
+        public void OnVehicleEnter(IVehicle vehicle)
+        {
+            _currentVehicle = vehicle;
+
+            // Bloquear movimiento del jugador
+            LockMovement(true);
+
+            // Desactivar CharacterController (ya no necesita física de personaje)
+            _characterController.enabled = false;
+
+            // Desactivar animación de personaje
+            if (_animationAgent != null)
+                _animationAgent.enabled = false;
+
+            // Asegurarse de que no esté agachado
+            _crouchSystem?.ForceCrouch(false);
+
+            Debug.Log($"[PlayerController] Entered vehicle: {vehicle.Transform.name}");
+        }
+
+        public void OnVehicleExit(IVehicle vehicle)
+        {
+            _currentVehicle = null;
+
+            // Reactivar CharacterController
+            _characterController.enabled = true;
+
+            // Reactivar animación
+            if (_animationAgent != null)
+                _animationAgent.enabled = true;
+
+            // Desbloquear movimiento
+            LockMovement(false);
+
+            // Resetear velocidad
+            Velocity = Vector3.zero;
+            _verticalSpeed = 0f;
+
+            // Forzar estado Idle al salir
+            ForceState(IdleState);
+
+            Debug.Log($"[PlayerController] Exited vehicle: {vehicle.Transform.name}");
         }
     }
 }

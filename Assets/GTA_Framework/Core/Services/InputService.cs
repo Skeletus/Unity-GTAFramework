@@ -14,6 +14,7 @@ namespace GTAFramework.Core.Services
         public bool IsSprintPressed { get; private set; }
         public bool IsJumpPressed { get; private set; }
         public bool IsCrouchPressed { get; private set; }
+        public bool IsInteractPressed { get; set; }
 
         public void Initialize()
         {
@@ -37,6 +38,9 @@ namespace GTAFramework.Core.Services
 
             _inputActions.Player.Crouch.performed += OnCrouch;
             _inputActions.Player.Crouch.canceled += OnCrouch;
+
+            _inputActions.Player.UseVehicle.performed += OnInteract;
+            _inputActions.Player.UseVehicle.canceled += OnInteract;
 
             _inputActions.Enable();
 
@@ -82,6 +86,14 @@ namespace GTAFramework.Core.Services
             if (context.performed)
             {
                 IsCrouchPressed = !IsCrouchPressed;
+            }
+        }
+
+        private void OnInteract(InputAction.CallbackContext context)
+        {
+            if (context.performed)
+            {
+                IsInteractPressed = true;
             }
         }
 

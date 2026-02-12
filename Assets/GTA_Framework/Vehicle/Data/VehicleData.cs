@@ -18,5 +18,8 @@ namespace GTAFramework.Vehicle.Data
         public float suspensionDistance = 0.3f;
         public float suspensionSpring = 35000f;
         public float suspensionDamper = 4500f;
+
+        [Header("Driver seat")]
+        public Transform driverSeatOffset;
     }
 }
