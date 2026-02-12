@@ -8,6 +8,7 @@ namespace GTAFramework.Vehicle.Components.Wheels
         [Header("Configuration")]
         [SerializeField] private bool _isPowered = true;
         [SerializeField] private bool _isSteerable = true;
+        [SerializeField] private bool _isRear = false; // Para el handbrake
 
         [Header("Visuals")]
         [SerializeField] private Transform _wheelMesh;
@@ -16,6 +17,49 @@ namespace GTAFramework.Vehicle.Components.Wheels
 
         public bool IsPowered => _isPowered;
         public bool IsSteerable => _isSteerable;
+        public bool IsRear => _isRear;
+        public bool IsGrounded => _wheelCollider != null && _wheelCollider.isGrounded;
+
+        // ========== PROPIEDADES DE INPUT (Wrappers del WheelCollider) ==========
+
+        /// <summary>
+        /// Ángulo de dirección en grados.
+        /// </summary>
+        public float SteerAngle
+        {
+            get => _wheelCollider?.steerAngle ?? 0f;
+            set
+            {
+                if (_wheelCollider != null)
+                    _wheelCollider.steerAngle = value;
+            }
+        }
+
+        /// <summary>
+        /// Torque del motor en Nm.
+        /// </summary>
+        public float MotorTorque
+        {
+            get => _wheelCollider?.motorTorque ?? 0f;
+            set
+            {
+                if (_wheelCollider != null)
+                    _wheelCollider.motorTorque = value;
+            }
+        }
+
+        /// <summary>
+        /// Torque de freno en Nm.
+        /// </summary>
+        public float BrakeTorque
+        {
+            get => _wheelCollider?.brakeTorque ?? 0f;
+            set
+            {
+                if (_wheelCollider != null)
+                    _wheelCollider.brakeTorque = value;
+            }
+        }
 
         private void Awake()
         {

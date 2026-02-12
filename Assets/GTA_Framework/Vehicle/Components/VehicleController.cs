@@ -16,6 +16,7 @@ namespace GTAFramework.Vehicle.Components
         [SerializeField] private Transform _driverSeat;
 
         private Rigidbody _rb;
+        private VehiclePhysics _physics;
         private IDriver _currentDriver;
 
         // Propiedades públicas
@@ -23,6 +24,7 @@ namespace GTAFramework.Vehicle.Components
         public Rigidbody Rigidbody => _rb;
         public WheelController[] Wheels => _wheels;
         public IDriver CurrentDriver => _currentDriver;
+        public VehiclePhysics Physics => _physics;
 
         // IVehicle implementation
         public bool IsOccupied => _currentDriver != null;
@@ -67,6 +69,15 @@ namespace GTAFramework.Vehicle.Components
             InitializeVehicle();
         }
 
+        private void FixedUpdate()
+        {
+            // Solo procesar física si hay un conductor
+            if (IsOccupied && _physics != null)
+            {
+                _physics.FixedUpdate();
+            }
+        }
+
         private void InitializeVehicle()
         {
             if (_data == null) return;
@@ -74,6 +85,8 @@ namespace GTAFramework.Vehicle.Components
             _rb.mass = _data.mass;
             _rb.interpolation = RigidbodyInterpolation.Interpolate;
             _rb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
+
+            _physics = new VehiclePhysics(this, _rb, _data);
 
             foreach (var wheel in _wheels)
             {

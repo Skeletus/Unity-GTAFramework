@@ -5,6 +5,7 @@ using GTAFramework.Core.Container;
 using GTAFramework.Vehicle.Components;
 using GTAFramework.Vehicle.Interfaces;
 using GTAFramework.Player.Components;
+using GTAFramework.Vehicle.Commands;
 
 namespace GTAFramework.Vehicle.Systems
 {
@@ -17,6 +18,11 @@ namespace GTAFramework.Vehicle.Systems
 
         private VehicleController _currentVehicle;
         private IDriver _player;
+
+        // Commands
+        private AccelerateCommand _accelerateCommand;
+        private SteerCommand _steerCommand;
+        private BrakeCommand _brakeCommand;
 
         public bool IsPlayerInVehicle => _currentVehicle != null;
 
@@ -40,7 +46,9 @@ namespace GTAFramework.Vehicle.Systems
 
         public void Tick(float deltaTime)
         {
-            if (_inputService.IsInteractPressed) // Nueva acción
+            if (_player == null) return;
+            
+            if (_inputService.IsInteractPressed)
             {
                 _inputService.IsInteractPressed = false;
 
@@ -48,6 +56,14 @@ namespace GTAFramework.Vehicle.Systems
                     ExitVehicle();
                 else
                     TryEnterNearestVehicle();
+            }
+
+            // Ejecutar comandos de conducción si está en un vehículo
+            if (IsPlayerInVehicle && _currentVehicle.Physics != null)
+            {
+                _accelerateCommand?.Execute(deltaTime);
+                _steerCommand?.Execute(deltaTime);
+                _brakeCommand?.Execute(deltaTime);
             }
         }
 
@@ -78,12 +94,27 @@ namespace GTAFramework.Vehicle.Systems
         {
             _currentVehicle = vehicle;
             vehicle.Enter(_player);
+
+            InitializeCommands();
         }
 
         private void ExitVehicle()
         {
             _currentVehicle?.Exit();
             _currentVehicle = null;
+
+            _accelerateCommand = null;
+            _steerCommand = null;
+            _brakeCommand = null;
+        }
+
+        private void InitializeCommands()
+        {
+            if (_currentVehicle == null || _inputService == null) return;
+
+            _accelerateCommand = new AccelerateCommand(_currentVehicle, _inputService);
+            _steerCommand = new SteerCommand(_currentVehicle, _inputService);
+            _brakeCommand = new BrakeCommand(_currentVehicle, _inputService);
         }
 
         public void LateTick(float deltaTime) { }

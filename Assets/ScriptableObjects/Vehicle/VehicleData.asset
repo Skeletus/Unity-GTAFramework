@@ -19,3 +19,8 @@ MonoBehaviour:
   suspensionDistance: 0.3
   suspensionSpring: 8000
   suspensionDamper: 2000
+  driverSeatOffset: {fileID: 0}
+  maxMotorTorque: 650
+  maxBrakeTorque: 300
+  maxSteerAngle: 35
+  steerSpeed: 10

@@ -21,5 +21,13 @@ namespace GTAFramework.Vehicle.Data
 
         [Header("Driver seat")]
         public Transform driverSeatOffset;
+
+        [Header("Engine")]
+        public float maxMotorTorque = 400f;
+        public float maxBrakeTorque = 300f;
+
+        [Header("Steering")]
+        public float maxSteerAngle = 35f;
+        public float steerSpeed = 10f;
     }
 }
