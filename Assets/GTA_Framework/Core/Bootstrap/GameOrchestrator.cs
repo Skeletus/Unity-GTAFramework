@@ -1,26 +1,30 @@
 using UnityEngine;
+using GTAFramework.Core.Container;
+using GTAFramework.Core.Interfaces;
 using GTAFramework.Core.Services;
-using GTAFramework.Core.Systems;
-using GTAFramework.Player.Systems;
-using GTAFramework.GTACamera.Systems;
-using GTAFramework.GTA_Animation.Systems;
+using System.Linq;
 
 namespace GTAFramework.Core.Bootstrap
 {
+    /// <summary>
+    /// Orchestrator con DI Container.
+    /// Sistemas se auto-descubren con [AutoRegister] y reciben servicios con [Inject].
+    /// </summary>
     public class GameOrchestrator : MonoBehaviour
     {
         private static GameOrchestrator _instance;
         public static GameOrchestrator Instance => _instance;
 
-        private SystemsManager _systemsManager;
-        private InputService _inputService;
+        private DIContainer _container;
 
         [Header("Debug")]
         [SerializeField] private bool _showDebugLogs = true;
 
+        [Header("Systems")]
+        [SerializeField] private bool _autoDiscoverSystems = true;
+
         private void Awake()
         {
-            // Singleton pattern
             if (_instance != null && _instance != this)
             {
                 Destroy(gameObject);
@@ -36,72 +40,78 @@ namespace GTAFramework.Core.Bootstrap
         private void InitializeFramework()
         {
             if (_showDebugLogs)
-                Debug.Log("=== Initializing GTA Framework ===");
+                Debug.Log("=== Initializing GTA Framework (DI) ===");
 
-            // 1. Inicializar Service Locator
-            InitializeServices();
+            _container = DIContainer.Instance;
 
-            // 2. Inicializar Systems Manager
-            _systemsManager = new SystemsManager();
+            RegisterCoreServices();
 
-            // 3. Registrar sistemas
-            RegisterSystems();
+            if (_autoDiscoverSystems)
+            {
+                if (_showDebugLogs)
+                    Debug.Log("[GameOrchestrator] Auto-discovering systems via [AutoRegister]...");
+
+                _container.DiscoverAndRegisterSystems();
+            }
+            else
+            {
+                if (_showDebugLogs)
+                    Debug.LogWarning("[GameOrchestrator] Auto-discovery disabled. No systems will be registered.");
+            }
+
+            _container.InitializeAllSystems();
 
             if (_showDebugLogs)
-                Debug.Log("=== GTA Framework Initialized ===");
+                Debug.Log($"=== GTA Framework Initialized ({_container.GetAllSystems().Count()} systems) ===");
         }
 
-        private void InitializeServices()
+        private void RegisterCoreServices()
         {
-            // Crear e inicializar InputService
-            _inputService = new InputService();
-            _inputService.Initialize();
+            // InputService (singleton)
+            var inputService = new InputService();
+            inputService.Initialize();
 
-            // Registrar en el Service Locator
-            ServiceLocator.Instance.RegisterService(_inputService);
-        }
+            // Registrar por interfaz y por tipo concreto
+            _container.RegisterSingleton<IService, InputService>(inputService);
+            _container.RegisterSingleton<InputService>(inputService);
 
-        private void RegisterSystems()
-        {
-            // Registrar PlayerMovementSystem
-            var playerMovementSystem = new PlayerMovementSystem();
-            _systemsManager.RegisterSystem(playerMovementSystem);
-
-            // 2) Animation (consume state -> animator params)
-            var animationSystem = new AnimationSystem();
-            _systemsManager.RegisterSystem(animationSystem);
-
-            // Registrar CameraSystem
-            var cameraSystem = new CameraSystem();
-            _systemsManager.RegisterSystem(cameraSystem);
+            if (_showDebugLogs)
+                Debug.Log("[GameOrchestrator] Core services registered: InputService");
         }
 
         private void Update()
         {
-            _systemsManager?.Tick(Time.deltaTime);
+            _container?.Tick(Time.deltaTime);
         }
 
         private void LateUpdate()
         {
-            _systemsManager?.LateTick(Time.deltaTime);
+            _container?.LateTick(Time.deltaTime);
         }
 
         private void FixedUpdate()
         {
-            _systemsManager?.FixedTick(Time.fixedDeltaTime);
+            _container?.FixedTick(Time.fixedDeltaTime);
         }
 
         private void OnDestroy()
         {
-            _systemsManager?.ShutdownAll();
-            _inputService?.Shutdown();
-            ServiceLocator.Instance.Clear();
+            // Limpieza completa del framework
+            _container?.Dispose();
         }
 
-        // Métodos públicos para acceso externo
-        public T GetSystem<T>() where T : class, GTAFramework.Core.Interfaces.IGameSystem
+        // ===== API Pública =====
+
+        public T GetSystem<T>() where T : class, IGameSystem
         {
-            return _systemsManager.GetSystem<T>();
+            return _container?.GetSystem<T>();
         }
+
+        public T GetService<T>()
+        {
+            return _container != null ? _container.Resolve<T>() : default;
+        }
+
+        public DIContainer Container => _container;
     }
 }

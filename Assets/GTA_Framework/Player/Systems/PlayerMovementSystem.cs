@@ -3,6 +3,7 @@ using GTAFramework.Core.Interfaces;
 using GTAFramework.Core.Services;
 using GTAFramework.Player.Components;
 using GTAFramework.Player.Commands;
+using GTAFramework.Core.Container;
 
 namespace GTAFramework.Player.Systems
 {
@@ -10,11 +11,12 @@ namespace GTAFramework.Player.Systems
     /// Sistema de movimiento del jugador usando Command Pattern.
     /// Encapsula Move/Rotate/Jump/Crouch como comandos independientes.
     /// </summary>
+    [AutoRegister(Priority = 10, StartActive = true)]
     public class PlayerMovementSystem : IGameSystem
     {
         public bool IsActive { get; set; } = true;
 
-        private InputService _inputService;
+        [Inject] private InputService _inputService;
         private PlayerController _playerController;
 
         // Commands
@@ -25,7 +27,7 @@ namespace GTAFramework.Player.Systems
 
         public void Initialize()
         {
-            _inputService = ServiceLocator.Instance.GetService<InputService>();
+            _inputService = DIContainer.Instance.Resolve<InputService>();
             _playerController = Object.FindFirstObjectByType<PlayerController>();
 
             if (_playerController == null)

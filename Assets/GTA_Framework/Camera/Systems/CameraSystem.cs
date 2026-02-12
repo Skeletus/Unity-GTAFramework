@@ -2,19 +2,21 @@ using UnityEngine;
 using GTAFramework.Core.Interfaces;
 using GTAFramework.Core.Services;
 using GTAFramework.GTACamera.Components;
+using GTAFramework.Core.Container;
 
 namespace GTAFramework.GTACamera.Systems
 {
+    [AutoRegister(Priority = 30, StartActive = true)]
     public class CameraSystem : IGameSystem
     {
         public bool IsActive { get; set; } = true;
 
-        private InputService _inputService;
+        [Inject] private InputService _inputService;
         private Components.ThirdPersonCamera _thirdPersonCamera;
 
         public void Initialize()
         {
-            _inputService = ServiceLocator.Instance.GetService<InputService>();
+            _inputService = DIContainer.Instance.Resolve<InputService>();
 
             _thirdPersonCamera = Object.FindFirstObjectByType<ThirdPersonCamera>();
 

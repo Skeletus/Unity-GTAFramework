@@ -1,6 +1,7 @@
 using UnityEngine;
 using GTAFramework.Core.Interfaces;
 using GTAFramework.GTA_Animation.Components;
+using GTAFramework.Core.Container;
 
 namespace GTAFramework.GTA_Animation.Systems
 {
@@ -10,6 +11,7 @@ namespace GTAFramework.GTA_Animation.Systems
     /// - En Tick: construye blackboard + ejecuta módulos + setea parámetros
     /// - En LateTick: limpia flags de 1 frame (y futuro IK/root motion)
     /// </summary>
+    [AutoRegister(Priority = 20, StartActive = true)]
     public sealed class AnimationSystem : IGameSystem
     {
         public bool IsActive { get; set; } = true;
