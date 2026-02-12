@@ -1,6 +1,7 @@
-using UnityEngine;
+﻿using UnityEngine;
 using GTAFramework.Player.Data;
 using GTAFramework.GTA_Animation.Components;
+using GTAFramework.Player.Components.States;
 
 namespace GTAFramework.Player.Components
 {
@@ -14,28 +15,56 @@ namespace GTAFramework.Player.Components
         private CharacterController _characterController;
         private Transform _cameraTransform;
 
-        // Movement state
+        // ========== STATE MACHINE ==========
+        private PlayerState _currentState;
+
+        // Public state references for state transitions
+        public IdleState IdleState { get; private set; }
+        public WalkingState WalkingState { get; private set; }
+        public RunningState RunningState { get; private set; }
+        public CrouchingState CrouchingState { get; private set; }
+        public AirborneState AirborneState { get; private set; }
+
+        [Header("Debug")]
+        [SerializeField] private bool _showStateDebug = true;
+        private string _currentStateName = "";
+
+        // ========== MOVEMENT STATE ==========
         public Vector3 Velocity { get; set; }
         public bool IsGrounded { get; private set; } // legacy alias (kept for other systems)
         public bool IsWalking { get; set; }
         public bool IsSprinting { get; set; }
-        public bool IsCrouching { get; set; }
+
+        // Crouch delegated (getter) + legacy setter (no rompe compilación si alguien lo setea)
+        public bool IsCrouching
+        {
+            get => _crouchSystem?.IsCrouching ?? false;
+            set
+            {
+                if (_crouchSystem == null) return;
+
+                // Mantener compatibilidad: antes era set directo.
+                // Usamos ForceCrouch para no "fallar silenciosamente" por falta de espacio.
+                _crouchSystem.ForceCrouch(value);
+            }
+        }
 
         [Header("Grounding Filter")]
         [SerializeField, Min(0f)] private float groundedStableDelay = 0.06f;
         [SerializeField] private float fallingVerticalSpeedThreshold = -0.1f;
 
-        public bool IsGroundedContact { get; private set; } // raw contact (custom probe)
-        public bool IsGroundedStable { get; private set; }  // debounced grounded
-        public bool IsFalling { get; private set; }
+        private GroundProbeSystem _groundProbeSystem;
+        private CrouchSystem _crouchSystem;
+
+        // Grounding compatibility (delegated to GroundProbeSystem)
+        public bool IsGroundedContact => _groundProbeSystem?.IsGroundedContact ?? false; // raw contact (custom probe)
+        public bool IsGroundedStable => _groundProbeSystem?.IsGroundedStable ?? false;  // debounced grounded
+        public bool IsFalling => _groundProbeSystem?.IsFalling ?? false;
 
         // Slope info (debug/animation/IK-ready)
-        public Vector3 GroundNormal { get; private set; } = Vector3.up;
-        public float GroundAngle { get; private set; }
-        public float GroundDistance { get; private set; }
-
-        private float _groundedStableTimer;
-        private float _coyoteTimer;
+        public Vector3 GroundNormal => _groundProbeSystem?.GroundNormal ?? Vector3.up;
+        public float GroundAngle => _groundProbeSystem?.GroundAngle ?? 0f;
+        public float GroundDistance => _groundProbeSystem?.GroundDistance ?? float.PositiveInfinity;
 
         // Locks
         public bool MovementLocked { get; private set; }     // global lock (cutscenes, etc.)
@@ -46,17 +75,12 @@ namespace GTAFramework.Player.Components
         private bool _jumpPressedThisFrame;
         private float _verticalSpeed;
 
-        // Character Controller original values
-        private float _originalHeight;
-        private float _originalCenterY;
-        private float _currentHeight;
-        private float _currentCenterY;
-
-
-
+        // ========== PUBLIC PROPERTIES ==========
         public PlayerMovementData MovementData => _movementData;
         public CharacterController CharacterController => _characterController;
         public Transform CameraTransform => _cameraTransform;
+        public PlayerState CurrentState => _currentState;
+        public string CurrentStateName => _currentStateName;
 
         // ICharacterAnimationSource
         float CharacterAnimationAgent.ICharacterAnimationSource.VerticalSpeed => _verticalSpeed;
@@ -71,6 +95,7 @@ namespace GTAFramework.Player.Components
 
         public bool IsMovementLocked => MovementLocked || _landingLocked;
 
+        // ========== UNITY LIFECYCLE ==========
         private void Awake()
         {
             _characterController = GetComponent<CharacterController>();
@@ -81,13 +106,24 @@ namespace GTAFramework.Player.Components
             if (Camera.main != null)
                 _cameraTransform = Camera.main.transform;
 
-            // Store original CharacterController values
-            _originalHeight = _characterController.height;
-            _originalCenterY = _characterController.center.y;
-            _currentHeight = _originalHeight;
-            _currentCenterY = _originalCenterY;
+            // Ground probe system
+            _groundProbeSystem = new GroundProbeSystem(
+                transform,
+                _characterController,
+                _movementData,
+                groundedStableDelay,
+                fallingVerticalSpeedThreshold
+            );
 
+            // Crouch system (POCO)
+            _crouchSystem = new CrouchSystem(
+                transform,
+                _characterController,
+                _movementData
+            );
 
+            // Initialize State Machine
+            InitializeStateMachine();
 
             RefreshCanJump();
         }
@@ -99,294 +135,112 @@ namespace GTAFramework.Player.Components
                 SetCameraTransform(thirdPersonCamera.transform);
 
             // Ensure first frame has correct grounded state even before any move
-            PostMoveUpdate();
+            _groundProbeSystem?.UpdateGrounding(_verticalSpeed, IsMovementLocked);
+            IsGrounded = IsGroundedContact;
+            RefreshCanJump();
         }
 
         private void Update()
         {
-            UpdateCrouchCollider();
+            _crouchSystem?.UpdateCollider();
+            UpdateStateMachine();
         }
 
-        /// <summary>
-        /// Updates the CharacterController collider based on crouch state
-        /// </summary>
-        private void UpdateCrouchCollider()
+        // ========== STATE MACHINE ==========
+        private void InitializeStateMachine()
         {
-            if (_movementData == null || _characterController == null)
+            // Create all states
+            IdleState = new IdleState(this);
+            WalkingState = new WalkingState(this);
+            RunningState = new RunningState(this);
+            CrouchingState = new CrouchingState(this);
+            AirborneState = new AirborneState(this);
+
+            // Set initial state (Idle by default)
+            _currentState = IdleState;
+            _currentStateName = _currentState.GetStateName();
+            _currentState.Enter();
+
+            if (_showStateDebug)
+                Debug.Log($"[PlayerController] State Machine initialized. Initial state: {_currentStateName}");
+        }
+
+        private void UpdateStateMachine()
+        {
+            if (_currentState == null)
                 return;
 
-            float targetHeight;
-            float targetCenterY;
+            // Update current state
+            _currentState.Update();
 
-            if (IsCrouching)
+            // Check for transitions
+            PlayerState nextState = _currentState.CheckTransitions();
+
+            if (nextState != null && nextState != _currentState)
             {
-                // Calculate crouched height and center
-                targetHeight = _originalHeight * _movementData.crouchHeightMultiplier;
-                // Adjust center Y so the bottom of the capsule stays at the same position
-                float heightDifference = _originalHeight - targetHeight;
-                targetCenterY = _originalCenterY - (heightDifference * 0.5f);
+                TransitionToState(nextState);
             }
-            else
-            {
-                // Return to original values
-                targetHeight = _originalHeight;
-                targetCenterY = _originalCenterY;
+        }
 
-            }
+        private void TransitionToState(PlayerState newState)
+        {
+            if (newState == null || newState == _currentState)
+                return;
 
-            // Smoothly transition
-            float transitionSpeed = _movementData.crouchTransitionSpeed * Time.deltaTime;
-            _currentHeight = Mathf.Lerp(_currentHeight, targetHeight, transitionSpeed);
-            _currentCenterY = Mathf.Lerp(_currentCenterY, targetCenterY, transitionSpeed);
+            string previousStateName = _currentStateName;
 
-            // Apply to CharacterController
-            _characterController.height = _currentHeight;
-            Vector3 center = _characterController.center;
-            center.y = _currentCenterY;
-            _characterController.center = center;
+            // Exit current state
+            _currentState.Exit();
+
+            // Enter new state
+            _currentState = newState;
+            _currentStateName = _currentState.GetStateName();
+            _currentState.Enter();
+
+            if (_showStateDebug)
+                Debug.Log($"[PlayerController] State transition: {previousStateName} → {_currentStateName}");
         }
 
         /// <summary>
-        /// Checks if there's enough space above the player to stand up
+        /// Force a state transition (useful for external systems)
+        /// </summary>
+        public void ForceState(PlayerState newState)
+        {
+            if (newState != null)
+                TransitionToState(newState);
+        }
+
+        /// <summary>
+        /// Checks if there's enough space above the player to stand up.
         /// </summary>
         public bool CanStandUp()
         {
-            if (!IsCrouching)
-                return true;
-
-            float checkHeight = _originalHeight;
-            float currentHeight = _characterController.height;
-            float additionalHeight = checkHeight - currentHeight;
-
-            if (additionalHeight <= 0.01f)
-                return true;
-
-            // Get the current position of the character controller
-            Vector3 centerLocal = _characterController.center;
-            Vector3 centerWorld = transform.TransformPoint(centerLocal);
-            float radius = _characterController.radius * 0.95f;
-
-            // Calculate the top point of the current crouched capsule
-            float currentHalfHeight = currentHeight * 0.5f;
-            Vector3 currentTop = centerWorld + Vector3.up * (currentHalfHeight - radius);
-
-            // Distance to check (from current top to where standing top would be)
-            float checkDistance = additionalHeight + 0.1f;
-
-            Debug.Log($"CanStandUp Check - Current Height: {currentHeight:F2}, Target Height: {checkHeight:F2}, Check Distance: {checkDistance:F2}");
-            Debug.Log($"Center World: {centerWorld}, Current Top: {currentTop}, Radius: {radius:F2}");
-
-
-            // Perform a sphere cast upward from current top position
-            bool hasObstacle = Physics.SphereCast(
-                currentTop,
-                radius,
-                Vector3.up,
-                out RaycastHit hit,
-                checkDistance,
-                _movementData.groundMask,
-                QueryTriggerInteraction.Ignore
-            );
-
-            if (hasObstacle)
-            {
-                Debug.Log($"<color=red>OBSTACULO DETECTADO: {hit.collider.gameObject.name} a distancia {hit.distance:F2}</color>");
-            }
-            else
-            {
-                Debug.Log($"<color=green>NO HAY OBSTACULOS - Puede levantarse</color>");
-            }
-
-            // Debug visualization
-            Debug.DrawRay(currentTop, Vector3.up * checkDistance, hasObstacle ? Color.red : Color.green, 0.5f);
-
-            return !hasObstacle;
-
+            return _crouchSystem?.CanStandUp() ?? true;
         }
-
-
 
         /// <summary>
-        /// Robust grounding:
-        /// - Uses a SphereCast under the capsule instead of only CharacterController.isGrounded
-        /// - Adds stable delay + coyote time (prevents false "falling" on ramps/stairs)
-        /// - Snaps down a little when walking down slopes so you don't lose contact
+        /// Intenta cambiar el estado de agachado.
+        /// (Úsalo desde PlayerMovementSystem / Input para toggle crouch “seguro”)
         /// </summary>
-        private void PostMoveUpdate()
+        /// <param name="crouching">True para agacharse, false para levantarse.</param>
+        /// <returns>True si el cambio fue exitoso.</returns>
+        public bool TrySetCrouching(bool crouching)
         {
-            float dt = Time.deltaTime;
-
-            // 1) Probe ground with a SphereCast (works on ramps/stairs better than isGrounded)
-            bool groundedProbe = ProbeGround(out RaycastHit hit);
-
-            IsGroundedContact = groundedProbe;
-            IsGrounded = IsGroundedContact; // keep compatibility
-
-            if (IsGroundedContact)
-            {
-                _groundedStableTimer += dt;
-                _coyoteTimer = _movementData != null ? _movementData.coyoteTime : 0f;
-
-                GroundNormal = hit.normal;
-                GroundAngle = Vector3.Angle(hit.normal, Vector3.up);
-                GroundDistance = hit.distance;
-            }
-            else
-            {
-                _groundedStableTimer = 0f;
-                _coyoteTimer -= dt;
-
-                GroundNormal = Vector3.up;
-                GroundAngle = 0f;
-                GroundDistance = float.PositiveInfinity;
-            }
-
-            IsGroundedStable = IsGroundedContact && _groundedStableTimer >= groundedStableDelay;
-
-            // 2) Snap-down when going down ramps/stairs:
-            // if we are moving down and very close to valid ground, snap to it (prevents false falling).
-            if (!IsGroundedContact && !IsMovementLocked && _verticalSpeed <= 0f)
-            {
-                if (TrySnapToGround(out RaycastHit snapHit))
-                {
-                    IsGroundedContact = true;
-                    IsGrounded = true;
-
-                    _groundedStableTimer += dt;
-                    _coyoteTimer = _movementData != null ? _movementData.coyoteTime : 0f;
-
-                    GroundNormal = snapHit.normal;
-                    GroundAngle = Vector3.Angle(snapHit.normal, Vector3.up);
-                    GroundDistance = snapHit.distance;
-
-                    IsGroundedStable = IsGroundedContact && _groundedStableTimer >= groundedStableDelay;
-                }
-            }
-
-            // 3) Falling "real": not grounded (including coyote) + already moving down
-            bool hasCoyote = _coyoteTimer > 0f;
-            bool groundedForFalling = IsGroundedContact || hasCoyote;
-            IsFalling = !groundedForFalling && _verticalSpeed < fallingVerticalSpeedThreshold;
-
-            RefreshCanJump();
+            return _crouchSystem?.SetCrouching(crouching) ?? false;
         }
 
-        private bool ProbeGround(out RaycastHit hit)
-        {
-            hit = default;
-
-            if (_movementData == null || _characterController == null)
-                return false;
-
-            // Capsule bottom in world space
-            Vector3 centerWorld = transform.TransformPoint(_characterController.center);
-            float radius = Mathf.Max(0.001f, _characterController.radius);
-            float height = Mathf.Max(radius * 2f, _characterController.height);
-
-            float castRadius = radius * Mathf.Clamp(_movementData.groundProbeRadiusFactor, 0.5f, 1.0f);
-            float bottomOffset = (height * 0.5f) - radius;
-            Vector3 bottom = centerWorld + Vector3.down * bottomOffset;
-
-            // Start a bit above bottom to avoid immediate overlaps
-            Vector3 origin = bottom + Vector3.up * 0.05f;
-
-            float castDistance = 0.05f + _movementData.groundProbeDistance;
-
-            bool hasHit = Physics.SphereCast(
-                origin,
-                castRadius,
-                Vector3.down,
-                out hit,
-                castDistance,
-                _movementData.groundMask,
-                QueryTriggerInteraction.Ignore
-            );
-
-            if (!hasHit)
-                return false;
-
-            float angle = Vector3.Angle(hit.normal, Vector3.up);
-            if (angle > _characterController.slopeLimit + 0.01f)
-                return false;
-
-            return true;
-        }
-
-        private bool TrySnapToGround(out RaycastHit hit)
-        {
-            hit = default;
-
-            if (_movementData == null || _characterController == null)
-                return false;
-
-            float snapDist = _movementData.groundSnapDistance;
-            if (snapDist <= 0f)
-                return false;
-
-            if (!ProbeGroundForDistance(snapDist, out hit))
-                return false;
-
-            float epsilon = 0.001f;
-            float moveDown = Mathf.Max(0f, hit.distance - epsilon);
-
-            if (moveDown <= 0f)
-                return false;
-
-            _characterController.Move(Vector3.down * moveDown);
-            return true;
-        }
-
-        private bool ProbeGroundForDistance(float extraDistance, out RaycastHit hit)
-        {
-            hit = default;
-
-            if (_movementData == null || _characterController == null)
-                return false;
-
-            Vector3 centerWorld = transform.TransformPoint(_characterController.center);
-            float radius = Mathf.Max(0.001f, _characterController.radius);
-            float height = Mathf.Max(radius * 2f, _characterController.height);
-
-            float castRadius = radius * Mathf.Clamp(_movementData.groundProbeRadiusFactor, 0.5f, 1.0f);
-            float bottomOffset = (height * 0.5f) - radius;
-            Vector3 bottom = centerWorld + Vector3.down * bottomOffset;
-            Vector3 origin = bottom + Vector3.up * 0.05f;
-
-            float castDistance = 0.05f + extraDistance;
-
-            bool hasHit = Physics.SphereCast(
-                origin,
-                castRadius,
-                Vector3.down,
-                out hit,
-                castDistance,
-                _movementData.groundMask,
-                QueryTriggerInteraction.Ignore
-            );
-
-            if (!hasHit)
-                return false;
-
-            float angle = Vector3.Angle(hit.normal, Vector3.up);
-            if (angle > _characterController.slopeLimit + 0.01f)
-                return false;
-
-            return true;
-        }
-
+        // ========== PUBLIC METHODS ==========
         public void Move(Vector3 velocityWorld)
         {
-            // Even if locked, we still update grounded/falling correctly (ramps, landing, etc.)
-            if(IsMovementLocked)
-            {
+            if (IsMovementLocked)
                 return;
-            }
-            if (!IsMovementLocked)
-            {
-                _characterController.Move(velocityWorld * Time.deltaTime);
-            }
 
-            PostMoveUpdate();
+            _characterController.Move(velocityWorld * Time.deltaTime);
+
+            _groundProbeSystem?.UpdateGrounding(_verticalSpeed, IsMovementLocked);
+            IsGrounded = IsGroundedContact; // legacy alias (kept for other systems)
+
+            RefreshCanJump();
         }
 
         public void SetCameraTransform(Transform cameraTransform)
@@ -404,6 +258,9 @@ namespace GTAFramework.Player.Components
         {
             _jumpPressedThisFrame = true;
             _verticalSpeed = verticalSpeed;
+
+            // Si quieres que el coyote se corte inmediatamente al saltar:
+            _groundProbeSystem?.ResetCoyoteTime();
         }
 
         public void SetVerticalSpeed(float verticalSpeed)
@@ -416,19 +273,16 @@ namespace GTAFramework.Player.Components
             CanJump = IsGroundedStable && !IsMovementLocked && !IsCrouching;
         }
 
-        // ----------------------------------------------------
+        // ========== ANIMATION EVENTS ==========
         // Animation Events (place these on the JumpLand clip)
-        // ----------------------------------------------------
         public void Anim_Land_Begin()
         {
             _landingLocked = true;
-            RefreshCanJump();
         }
 
         public void Anim_Land_End()
         {
             _landingLocked = false;
-            RefreshCanJump();
         }
     }
 }

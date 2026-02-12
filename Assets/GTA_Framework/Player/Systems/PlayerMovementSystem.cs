@@ -2,9 +2,14 @@ using UnityEngine;
 using GTAFramework.Core.Interfaces;
 using GTAFramework.Core.Services;
 using GTAFramework.Player.Components;
+using GTAFramework.Player.Commands;
 
 namespace GTAFramework.Player.Systems
 {
+    /// <summary>
+    /// Sistema de movimiento del jugador usando Command Pattern.
+    /// Encapsula Move/Rotate/Jump/Crouch como comandos independientes.
+    /// </summary>
     public class PlayerMovementSystem : IGameSystem
     {
         public bool IsActive { get; set; } = true;
@@ -12,12 +17,11 @@ namespace GTAFramework.Player.Systems
         private InputService _inputService;
         private PlayerController _playerController;
 
-        private Vector3 _currentVelocity;
-        private float _verticalVelocity;
-
-        private bool _jumpRequested;
-        private bool _lastCrouchInputState;
-
+        // Commands
+        private MoveCommand _moveCommand;
+        private RotateCommand _rotateCommand;
+        private JumpCommand _jumpCommand;
+        private CrouchCommand _crouchCommand;
 
         public void Initialize()
         {
@@ -25,9 +29,21 @@ namespace GTAFramework.Player.Systems
             _playerController = Object.FindFirstObjectByType<PlayerController>();
 
             if (_playerController == null)
+            {
                 Debug.LogWarning("PlayerMovementSystem: No PlayerController found in scene!");
+                return;
+            }
 
-            Debug.Log("PlayerMovementSystem initialized.");
+            InitializeCommands();
+            Debug.Log("PlayerMovementSystem initialized with Command Pattern.");
+        }
+
+        private void InitializeCommands()
+        {
+            _moveCommand = new MoveCommand(_playerController, _inputService);
+            _rotateCommand = new RotateCommand(_playerController, _inputService);
+            _jumpCommand = new JumpCommand(_playerController);
+            _crouchCommand = new CrouchCommand(_playerController, _inputService, enableDebugLogs: true);
         }
 
         public void Tick(float deltaTime)
@@ -35,34 +51,38 @@ namespace GTAFramework.Player.Systems
             if (_playerController == null || _inputService == null)
                 return;
 
-            
-            // Capture jump (only if stable grounded)
+            // Capturar request de salto (solo si grounded stable) tal como antes
             if (_inputService.IsJumpPressed && _playerController.IsGroundedStable)
-                _jumpRequested = true;
+                _jumpCommand.RequestJump();
 
-            // Movement/rotation blocked during landing (and any lock)
+            // Movement/rotation bloqueado durante landing (y cualquier lock)
             if (!_playerController.IsMovementLocked)
             {
-                HandleMovement(deltaTime);
-                HandleRotation(deltaTime);
+                _moveCommand.Execute(deltaTime);
+                _rotateCommand.Execute(deltaTime);
             }
             else
             {
-                _currentVelocity = Vector3.zero;
+                _moveCommand.ResetVelocity();
             }
 
-            HandleGravity(deltaTime);
+            // Gravedad/salto (vertical)
+            _jumpCommand.Execute(deltaTime);
 
-            // Handle crouching FIRST - before movement
-            HandleCrouching();
+            // Crouch toggle (antes de aplicar Move final)
+            _crouchCommand.Execute(deltaTime);
 
-            // One final Move
-            Vector3 totalVelocity = _currentVelocity;
-            totalVelocity.y = _verticalVelocity;
+            // Aplicar velocidad final al controller (un solo Move)
+            ApplyVelocity();
+        }
+
+        private void ApplyVelocity()
+        {
+            Vector3 totalVelocity = _moveCommand.CurrentVelocity;
+            totalVelocity.y = _jumpCommand.VerticalVelocity;
 
             _playerController.Velocity = totalVelocity;
-            _playerController.SetVerticalSpeed(_verticalVelocity);
-
+            _playerController.SetVerticalSpeed(_jumpCommand.VerticalVelocity);
             _playerController.Move(totalVelocity);
         }
 
@@ -70,7 +90,7 @@ namespace GTAFramework.Player.Systems
 
         public void FixedTick(float fixedDeltaTime)
         {
-            // Avoid duplicating gravity here if you already do it in Tick (Update).
+            // Intencionalmente vacío si ya aplicas todo en Tick(Update).
         }
 
         public void Shutdown()
@@ -78,151 +98,17 @@ namespace GTAFramework.Player.Systems
             Debug.Log("PlayerMovementSystem shutdown.");
         }
 
-        private void HandleMovement(float deltaTime)
-        {
-            Vector2 input = _inputService.MovementInput;
-            Vector3 moveDirection = GetMovementDirection(input);
-
-            float targetSpeed = GetTargetSpeed();
-
-            if (moveDirection.magnitude > 0.1f)
-            {
-                _currentVelocity = Vector3.Lerp(
-                    _currentVelocity,
-                    moveDirection * targetSpeed,
-                    _playerController.MovementData.acceleration * deltaTime
-                );
-            }
-            else
-            {
-                _currentVelocity = Vector3.Lerp(
-                    _currentVelocity,
-                    Vector3.zero,
-                    _playerController.MovementData.deceleration * deltaTime
-                );
-            }
-        }
-
-        private void HandleRotation(float deltaTime)
-        {
-            Vector2 input = _inputService.MovementInput;
-
-            if (input.magnitude > 0.1f)
-            {
-                Vector3 moveDirection = GetMovementDirection(input);
-
-                if (moveDirection.magnitude > 0.1f)
-                {
-                    Quaternion targetRotation = Quaternion.LookRotation(moveDirection);
-                    _playerController.transform.rotation = Quaternion.Slerp(
-                        _playerController.transform.rotation,
-                        targetRotation,
-                        _playerController.MovementData.rotationSpeed * deltaTime
-                    );
-                }
-            }
-        }
-
-        private void HandleGravity(float deltaTime)
-        {
-            var data = _playerController.MovementData;
-
-            // Jump
-            if (_jumpRequested && _playerController.CanJump)
-            {
-                _verticalVelocity = Mathf.Sqrt(data.jumpHeight * -2f * data.gravity);
-                _jumpRequested = false;
-
-                _playerController.NotifyJump(_verticalVelocity);
-            }
-
-            // Stick to ground on ramps/stairs
-            if (_playerController.IsGroundedContact && _verticalVelocity <= 0f)
-            {
-                _verticalVelocity = -Mathf.Max(2f, data.stickToGroundForce);
-                return;
-            }
-
-            // Gravity in air
-            _verticalVelocity += data.gravity * deltaTime;
-            _verticalVelocity = Mathf.Max(_verticalVelocity, data.maxFallSpeed);
-        }
-
-        private void HandleCrouching()
-        {
-            bool currentInputState = _inputService.IsCrouchPressed;
-
-            // Detectar si el toggle cambió
-            if (currentInputState == _lastCrouchInputState)
-                return; // No cambió, no hacer nada
-
-            _lastCrouchInputState = currentInputState;
-
-            // Toggle crouch when C is pressed
-            if (_playerController.IsCrouching)
-            {
-                // Trying to stand up - check if there's space
-                if (_playerController.CanStandUp())
-                {
-                    _playerController.IsCrouching = false;
-                    Debug.Log("Levantándose - espacio disponible");
-                }
-                else
-                {
-                    Debug.Log("No se puede levantar - hay obstáculo arriba");
-                }
-            }
-            else
-            {
-                // Crouching down - always allowed
-                _playerController.IsCrouching = true;
-                Debug.Log("Agachándose");
-            }
-        }
-
-
-
-        private Vector3 GetMovementDirection(Vector2 input)
-        {
-            Vector3 forward = Vector3.forward;
-            Vector3 right = Vector3.right;
-
-            if (_playerController.CameraTransform != null)
-            {
-                forward = _playerController.CameraTransform.forward;
-                right = _playerController.CameraTransform.right;
-            }
-
-            forward.y = 0;
-            right.y = 0;
-            forward.Normalize();
-            right.Normalize();
-
-            return (forward * input.y + right * input.x).normalized;
-        }
-
-        private float GetTargetSpeed()
-        {
-            var data = _playerController.MovementData;
-
-            _playerController.IsWalking = _inputService.IsWalkPressed;
-            _playerController.IsSprinting = _inputService.IsSprintPressed;
-
-            if (_playerController.IsWalking)
-                return data.slowWalkingSpeed;
-
-            if (_playerController.IsCrouching)
-                return data.crouchSpeed;
-
-            if (_playerController.IsSprinting)
-                return data.sprintSpeed;
-
-            return data.runSpeed;
-        }
-
         public void SetPlayerController(PlayerController controller)
         {
             _playerController = controller;
+            if (_playerController != null && _inputService != null)
+                InitializeCommands();
         }
+
+        // API pública útil para tests / IA / replay
+        public MoveCommand MoveCommand => _moveCommand;
+        public RotateCommand RotateCommand => _rotateCommand;
+        public JumpCommand JumpCommand => _jumpCommand;
+        public CrouchCommand CrouchCommand => _crouchCommand;
     }
 }

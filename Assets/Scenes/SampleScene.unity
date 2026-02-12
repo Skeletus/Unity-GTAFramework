@@ -994,7 +994,8 @@ PrefabInstance:
       propertyPath: m_ApplyRootMotion
       value: 1
       objectReference: {fileID: 0}
-    m_RemovedComponents: []
+    m_RemovedComponents:
+    - {fileID: 5866666021909216657, guid: 1655713e3ca38a045b8eb08c49b998a0, type: 3}
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
     m_AddedComponents: []
@@ -1054,6 +1055,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::GTAFramework.Player.Components.PlayerController
   _movementData: {fileID: 11400000, guid: cdcb80d31f2d2514e910020b6ab490ef, type: 2}
   _animationAgent: {fileID: 866316594}
+  _showStateDebug: 1
   groundedStableDelay: 0.5
   fallingVerticalSpeedThreshold: -0.1
 --- !u!143 &866316593
@@ -1496,6 +1498,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::GTAFramework.Player.Components.PlayerController
   _movementData: {fileID: 11400000, guid: cdcb80d31f2d2514e910020b6ab490ef, type: 2}
   _animationAgent: {fileID: 0}
+  _showStateDebug: 1
   groundedStableDelay: 0.06
   fallingVerticalSpeedThreshold: -0.1
 --- !u!143 &1375250426

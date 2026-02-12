@@ -23,3 +23,13 @@ MonoBehaviour:
   jumpHeight: 5.5
   gravity: -15
   maxFallSpeed: -20
+  groundMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  groundProbeDistance: 0.25
+  groundProbeRadiusFactor: 0.95
+  groundSnapDistance: 0.35
+  stickToGroundForce: 5
+  coyoteTime: 0.08
+  crouchHeightMultiplier: 0.5
+  crouchTransitionSpeed: 10
