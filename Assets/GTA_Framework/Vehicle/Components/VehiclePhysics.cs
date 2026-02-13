@@ -18,6 +18,14 @@ namespace GTAFramework.Vehicle.Components
         // Output
         public float CurrentSteerAngle { get; private set; }
 
+        // Reverse system
+        private float _stoppedTimer = 0f;
+        private bool _canReverse = false;
+
+        // Debug
+        public bool CanReverse => _canReverse;
+        public float StoppedTimer => _stoppedTimer;
+
         public VehiclePhysics(VehicleController controller, Rigidbody rb, VehicleData data)
         {
             _controller = controller;
@@ -55,10 +63,71 @@ namespace GTAFramework.Vehicle.Components
 
         private void ApplyWheelForces()
         {
+            float currentSpeed = _rb.linearVelocity.magnitude;
+
+            // Detectar dirección del movimiento
+            float forwardSpeed = Vector3.Dot(_rb.linearVelocity, _controller.Transform.forward);
+            bool isMovingForward = forwardSpeed > 0.5f;
+            bool isMovingBackward = forwardSpeed < -0.5f;
+            bool isStopped = currentSpeed < 0.5f;
+
+            // === LÓGICA DE REVERSA CON DELAY ===
+            if (isStopped && MotorInput < -0.1f)
+            {
+                _stoppedTimer += Time.fixedDeltaTime;
+                if (_stoppedTimer >= _data.reverseDelay)
+                {
+                    _canReverse = true;
+                }
+            }
+            else if (MotorInput >= -0.1f)
+            {
+                _stoppedTimer = 0f;
+                _canReverse = false;
+            }
+
+            // === ENGINE BRAKE ===
             float engineBrake = 0f;
             if (Mathf.Abs(MotorInput) < 0.1f && Mathf.Abs(BrakeInput) < 0.1f)
             {
-                engineBrake = _data.engineBrakeTorque; // Nuevo campo en VehicleData
+                engineBrake = _data.engineBrakeTorque;
+            }
+
+            // === SPEED LIMITER ===
+            float speedLimiter = 1f;
+            if (currentSpeed >= _data.maxSpeed)
+            {
+                speedLimiter = 0f;
+            }
+            else if (currentSpeed > _data.maxSpeed * 0.9f)
+            {
+                speedLimiter = (_data.maxSpeed - currentSpeed) / (_data.maxSpeed * 0.1f);
+            }
+
+            // === CALCULAR TORQUE EFECTIVO ===
+            float effectiveTorque = 0f;
+            float effectiveBrake = _data.maxBrakeTorque * BrakeInput + engineBrake;
+
+            if (MotorInput > 0.1f)
+            {
+                // Acelerar hacia adelante
+                effectiveTorque = _data.maxMotorTorque * MotorInput * speedLimiter;
+                _canReverse = false;
+                _stoppedTimer = 0f;
+            }
+            else if (MotorInput < -0.1f)
+            {
+                if (isMovingForward && currentSpeed > 0.5f)
+                {
+                    // Frenando mientras avanza: aplicar freno fuerte
+                    effectiveBrake += _data.maxBrakeTorque * Mathf.Abs(MotorInput);
+                }
+                else if (_canReverse)
+                {
+                    // Reversa activada después del delay
+                    effectiveTorque = _data.maxMotorTorque * MotorInput * _data.reverseTorqueMultiplier;
+                }
+                // Si está detenido pero sin canReverse, no hace nada (espera el delay)
             }
 
             foreach (var wheel in _controller.Wheels)
@@ -67,9 +136,9 @@ namespace GTAFramework.Vehicle.Components
                     wheel.SteerAngle = CurrentSteerAngle;
 
                 if (wheel.IsPowered)
-                    wheel.MotorTorque = _data.maxMotorTorque * MotorInput;
+                    wheel.MotorTorque = effectiveTorque;
 
-                wheel.BrakeTorque = _data.maxBrakeTorque * BrakeInput + engineBrake;
+                wheel.BrakeTorque = effectiveBrake;
             }
         }
 

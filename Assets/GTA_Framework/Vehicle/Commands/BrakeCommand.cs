@@ -24,12 +24,19 @@ namespace GTAFramework.Vehicle.Commands
         {
             if (_controller?.Physics == null || _input == null) return;
 
-            // Freno normal: cuando se presiona S (input.y negativo)
-            float brakeInput = _input.MovementInput.y < 0f ? Mathf.Abs(_input.MovementInput.y) : 0f;
-            _controller.Physics.BrakeInput = brakeInput;
+            float forwardSpeed = Vector3.Dot(_controller.Rigidbody.linearVelocity, _controller.Transform.forward);
+            bool isMovingForward = forwardSpeed > 0.5f;
 
-            // Freno de mano: puedes usar Sprint o crear una nueva acción
-            // Por ahora usamos IsSprintPressed como handbrake
+            // Solo aplicar freno si:
+            // 1. Se presiona S (input.y negativo)
+            // 2. El vehículo está moviéndose hacia adelante
+            float brakeInput = 0f;
+            if (_input.MovementInput.y < 0f && isMovingForward)
+            {
+                brakeInput = Mathf.Abs(_input.MovementInput.y);
+            }
+
+            _controller.Physics.BrakeInput = brakeInput;
             _controller.Physics.Handbrake = _input.IsSprintPressed;
         }
     }

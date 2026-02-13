@@ -3,6 +3,7 @@ using GTAFramework.Vehicle.Data;
 using GTAFramework.Vehicle.Components.Wheels;
 using GTAFramework.Vehicle.Interfaces;
 using GTAFramework.Vehicle.States;
+using static UnityEngine.UI.Image;
 
 namespace GTAFramework.Vehicle.Components
 {
@@ -53,7 +54,24 @@ namespace GTAFramework.Vehicle.Components
 
         // Ground detection
         public bool IsGrounded { get; private set; }
-        public float CurrentSpeed => _rb != null ? _rb.linearVelocity.magnitude : 0f;
+        // Umbral mínimo de velocidad (0.1 m/s = casi detenido)
+        private const float SPEED_THRESHOLD = 0.1f;
+
+        public float CurrentSpeed
+        {
+            get
+            {
+                if (_rb == null) return 0f;
+
+                float rawSpeed = _rb.linearVelocity.magnitude;
+
+                // Si la velocidad es menor al umbral, considerar como detenido
+                if (rawSpeed < SPEED_THRESHOLD) return 0f;
+
+                // Redondear a 1 decimal
+                return Mathf.Round(rawSpeed * 10f) / 10f;
+            }
+        }
 
         public void Enter(IDriver driver)
         {
@@ -192,8 +210,15 @@ namespace GTAFramework.Vehicle.Components
         private void UpdateGroundDetection()
         {
             // Raycast desde el centro del vehículo hacia abajo
-            Vector3 origin = transform.position + Vector3.up * 0.1f;
-            IsGrounded = UnityEngine.Physics.Raycast(origin, Vector3.down, _groundCheckDistance, _groundMask);
+            IsGrounded = false;
+            foreach (var wheel in _wheels)
+            {
+                if (wheel.IsGrounded)
+                {
+                    IsGrounded = true;
+                    break;
+                }
+            }
         }
     }
 }

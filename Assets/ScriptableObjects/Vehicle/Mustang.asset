@@ -23,6 +23,9 @@ MonoBehaviour:
   maxMotorTorque: 1800
   maxBrakeTorque: 1500
   engineBrakeTorque: 1400
+  maxSpeed: 50
+  reverseDelay: 0.5
+  reverseTorqueMultiplier: 0.6
   maxSteerAngle: 35
   steerSpeed: 30
   speedThreshold: 20

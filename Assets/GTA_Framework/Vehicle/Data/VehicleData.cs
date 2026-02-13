@@ -26,6 +26,11 @@ namespace GTAFramework.Vehicle.Data
         public float maxMotorTorque = 400f;
         public float maxBrakeTorque = 300f;
         public float engineBrakeTorque = 50f;
+        public float maxSpeed = 30f; // m/s (= 108 km/h)
+
+        [Header("Reverse")]
+        public float reverseDelay = 1.5f; // Segundos de espera antes de reversar
+        public float reverseTorqueMultiplier = 0.6f; // Reversa más lenta que avance
 
         [Header("Steering")]
         public float maxSteerAngle = 35f;
