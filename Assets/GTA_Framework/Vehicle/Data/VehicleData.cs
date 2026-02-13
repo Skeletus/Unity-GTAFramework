@@ -25,9 +25,21 @@ namespace GTAFramework.Vehicle.Data
         [Header("Engine")]
         public float maxMotorTorque = 400f;
         public float maxBrakeTorque = 300f;
+        public float engineBrakeTorque = 50f;
 
         [Header("Steering")]
         public float maxSteerAngle = 35f;
+
+        [Header("Sensitive Steering")]
         public float steerSpeed = 10f;
+
+        [Tooltip("Velocidad a partir de la cual se reduce el ángulo de dirección")]
+        public float speedThreshold = 10f; // m/s (~36 km/h)
+
+        [Tooltip("Factor de reducción máxima del ángulo a alta velocidad")]
+        [Range(0.1f, 0.5f)] public float highSpeedSteerFactor = 0.3f;
+
+        [Tooltip("Curva de reducción de steering según velocidad")]
+        public AnimationCurve steerReductionCurve = AnimationCurve.EaseInOut(0, 1, 1, 0.3f);
     }
 }
