@@ -54,3 +54,6 @@ MonoBehaviour:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
+  maxHealth: 100
+  crashDamageMultiplier: 1
+  deformationStrength: 1

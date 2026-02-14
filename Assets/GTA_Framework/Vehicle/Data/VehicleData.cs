@@ -46,5 +46,16 @@ namespace GTAFramework.Vehicle.Data
 
         [Tooltip("Curva de reducción de steering según velocidad")]
         public AnimationCurve steerReductionCurve = AnimationCurve.EaseInOut(0, 1, 1, 0.3f);
+
+        [Header("Damage")]
+        [Tooltip("Salud máxima del vehículo")]
+        public float maxHealth = 100f;
+
+        [Tooltip("Multiplicador de daño por colisiones")]
+        public float crashDamageMultiplier = 1f;
+
+        [Tooltip("Fuerza de deformación de la carrocería")]
+        [Range(0f, 1f)]
+        public float deformationStrength = 0.1f;
     }
 }

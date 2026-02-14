@@ -130,6 +130,9 @@ namespace GTAFramework.Vehicle.Components
                 // Si está detenido pero sin canReverse, no hace nada (espera el delay)
             }
 
+            // === HANDBRAKE: Bloquear ruedas traseras ===
+            float handbrakeTorque = Handbrake ? _data.maxBrakeTorque * 3f : 0f;
+
             foreach (var wheel in _controller.Wheels)
             {
                 if (wheel.IsSteerable)
@@ -138,7 +141,14 @@ namespace GTAFramework.Vehicle.Components
                 if (wheel.IsPowered)
                     wheel.MotorTorque = effectiveTorque;
 
-                wheel.BrakeTorque = effectiveBrake;
+                if (wheel.IsRear)
+                {
+                    wheel.BrakeTorque = effectiveBrake + handbrakeTorque;
+                }
+                else
+                {
+                    wheel.BrakeTorque = effectiveBrake;
+                }
             }
         }
 

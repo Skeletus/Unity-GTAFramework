@@ -77,7 +77,8 @@ namespace GTAFramework.Vehicle.Systems
 
             foreach (var v in vehicles)
             {
-                if (v.IsOccupied) continue;
+                if (v.IsOccupied || v.IsDestroyed) continue;
+
                 float dist = Vector3.Distance(_player.Transform.position, v.transform.position);
                 if (dist < nearestDist)
                 {
@@ -92,6 +93,13 @@ namespace GTAFramework.Vehicle.Systems
 
         private void EnterVehicle(VehicleController vehicle)
         {
+            // Verificación adicional por seguridad
+            if (vehicle.IsDestroyed)
+            {
+                Debug.Log($"[VehicleSystem] Cannot enter destroyed vehicle: {vehicle.name}");
+                return;
+            }
+
             _currentVehicle = vehicle;
             vehicle.Enter(_player);
 

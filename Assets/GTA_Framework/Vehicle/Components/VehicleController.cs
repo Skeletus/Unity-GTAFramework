@@ -13,6 +13,7 @@ namespace GTAFramework.Vehicle.Components
         [Header("References")]
         [SerializeField] private VehicleData _data;
         [SerializeField] private WheelController[] _wheels;
+        [SerializeField] private MeshFilter _bodyMesh;
 
         [Header("Seats")]
         [SerializeField] private Transform _driverSeat;
@@ -34,6 +35,9 @@ namespace GTAFramework.Vehicle.Components
         public DrivingState DrivingState { get; private set; }
         public Vehicle_AirborneState AirborneState { get; private set; }
 
+        // Campo privado
+        private VehicleDamage _damage;
+
         [Header("Debug")]
         [SerializeField] private bool _showStateDebug = true;
         [SerializeField] private float _currentSpeedDebug;
@@ -46,7 +50,12 @@ namespace GTAFramework.Vehicle.Components
         public IDriver CurrentDriver => _currentDriver;
         public VehiclePhysics Physics => _physics;
         public VehicleState CurrentState => _currentState;
+        public DestroyedState DestroyedState { get; private set; }
         public string CurrentStateName => _currentStateName;
+        // Propiedad pública
+        public VehicleDamage Damage => _damage;
+        public bool IsDestroyed => _damage?.IsDestroyed ?? false;
+
 
         // IVehicle implementation
         public bool IsOccupied => _currentDriver != null;
@@ -76,6 +85,13 @@ namespace GTAFramework.Vehicle.Components
         public void Enter(IDriver driver)
         {
             if (IsOccupied) return;
+
+            // No permitir entrar si está destruido
+            if (IsDestroyed)
+            {
+                Debug.Log($"[VehicleController] Cannot enter destroyed vehicle: {name}");
+                return;
+            }
 
             _currentDriver = driver;
             driver.OnVehicleEnter(this);
@@ -126,6 +142,16 @@ namespace GTAFramework.Vehicle.Components
 
         private void FixedUpdate()
         {
+            if (IsDestroyed)
+            {
+                // Mantener freno de mano activo
+                if (_physics != null)
+                {
+                    _physics.Handbrake = true;
+                }
+                return;
+            }
+
             // Solo procesar física si hay un conductor
             if (IsOccupied && _physics != null)
             {
@@ -144,6 +170,9 @@ namespace GTAFramework.Vehicle.Components
 
             _physics = new VehiclePhysics(this, _rb, _data);
 
+            _damage = new VehicleDamage(this, _data, _bodyMesh);
+            _damage.OnDestroy += HandleVehicleDestroyed;
+
             foreach (var wheel in _wheels)
             {
                 wheel.Configure(_data);
@@ -157,6 +186,7 @@ namespace GTAFramework.Vehicle.Components
             ParkedState = new ParkedState(this);
             DrivingState = new DrivingState(this);
             AirborneState = new Vehicle_AirborneState(this);
+            DestroyedState = new DestroyedState(this);
 
             // Estado inicial: Parked
             _currentState = ParkedState;
@@ -203,6 +233,27 @@ namespace GTAFramework.Vehicle.Components
         {
             if (newState != null)
                 TransitionToState(newState);
+        }
+
+        // Nuevo método para colisiones
+        private void OnCollisionEnter(Collision collision)
+        {
+            // No procesar si ya está destruido
+            if (IsDestroyed) return;
+
+            // Solo procesar colisiones significativas
+            float impactForce = collision.relativeVelocity.magnitude;
+            if (impactForce > 5f) // Umbral mínimo de impacto
+            {
+                _damage?.HandleCollision(collision);
+            }
+        }
+
+        // Nuevo método para evento de destrucción
+        private void HandleVehicleDestroyed()
+        {
+            // Transicionar a DestroyedState
+            ForceState(DestroyedState);
         }
 
         // ========== GROUND DETECTION ==========
