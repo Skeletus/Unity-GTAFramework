@@ -2,6 +2,7 @@ using System;
 using UnityEngine;
 using GTAFramework.Vehicle.Data;
 using GTAFramework.Vehicle.Enums;
+using GTAFramework.Vehicle.Interfaces;
 
 namespace GTAFramework.Vehicle.Components
 {
@@ -9,7 +10,7 @@ namespace GTAFramework.Vehicle.Components
     /// Sistema de daño del vehículo.
     /// Maneja salud, aplicación de daño por colisiones, y deformación de mesh.
     /// </summary>
-    public class VehicleDamage
+    public class VehicleDamage : IVehicleDamage
     {
         private readonly VehicleController _controller;
         private readonly VehicleData _data;

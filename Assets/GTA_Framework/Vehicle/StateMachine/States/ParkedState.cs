@@ -1,5 +1,6 @@
 using UnityEngine;
 using GTAFramework.Vehicle.Components;
+using GTAFramework.Vehicle.Interfaces;
 
 namespace GTAFramework.Vehicle.States
 {
@@ -9,55 +10,55 @@ namespace GTAFramework.Vehicle.States
     public class ParkedState : VehicleState
     {
         private float _stopThreshold = 0.5f;
-        public ParkedState(VehicleController controller) : base(controller) { }
+        public ParkedState(IVehicleContext context) : base(context) { }
 
         public override void Enter()
         {
-            Debug.Log($"[VehicleState] {_controller.name} is now PARKED");
+            Debug.Log($"[VehicleState] {_context.Transform.name} is now PARKED");
             // Resetear todos los inputs de física
-            if (_controller.Physics != null)
+            if (_context.Physics != null)
             {
-                _controller.Physics.MotorInput = 0f;
-                _controller.Physics.SteerInput = 0f;
-                _controller.Physics.BrakeInput = 0f;
-                _controller.Physics.Handbrake = true; // Activar freno de mano
+                _context.Physics.MotorInput = 0f;
+                _context.Physics.SteerInput = 0f;
+                _context.Physics.BrakeInput = 0f;
+                _context.Physics.Handbrake = true; // Activar freno de mano
             }
         }
 
         public override void Update()
         {
             // Aplicar frenado gradual mientras el vehículo está en movimiento
-            if (_controller.Physics != null && _controller.CurrentSpeed > _stopThreshold)
+            if (_context.Physics != null && _context.CurrentSpeed > _stopThreshold)
             {
                 // Freno de mano activo para detener el vehículo
-                _controller.Physics.Handbrake = true;
-                _controller.Physics.BrakeInput = 1f;
+                _context.Physics.Handbrake = true;
+                _context.Physics.BrakeInput = 1f;
             }
-            else if (_controller.CurrentSpeed <= _stopThreshold)
+            else if (_context.CurrentSpeed <= _stopThreshold)
             {
                 // Vehículo detenido, mantener freno de mano
-                _controller.Physics.BrakeInput = 0f;
-                _controller.Physics.Handbrake = true;
+                _context.Physics.BrakeInput = 0f;
+                _context.Physics.Handbrake = true;
             }
             // Nada especial que hacer mientras está estacionado
         }
 
         public override void Exit()
         {
-            Debug.Log($"[VehicleState] {_controller.name} leaving PARKED state");
+            Debug.Log($"[VehicleState] {_context.Transform.name} leaving PARKED state");
             // Desactivar freno de mano al salir del estado
-            if (_controller.Physics != null)
+            if (_context.Physics != null)
             {
-                _controller.Physics.Handbrake = false;
+                _context.Physics.Handbrake = false;
             }
         }
 
-        public override VehicleState CheckTransitions()
+        public override string CheckTransitions()
         {
             // Si hay un conductor, cambiar a DrivingState
-            if (_controller.IsOccupied)
+            if (_context.IsOccupied)
             {
-                return _controller.DrivingState;
+                return VehicleStateNames.Driving;
             }
 
             // Permanecer en ParkedState

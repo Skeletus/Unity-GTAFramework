@@ -50,6 +50,8 @@ namespace GTAFramework.GTACamera.Data
         [Tooltip("Suavidad de la rotación")]
         [Range(1f, 30f)]
         public float rotationSmoothSpeed = 12f;
+        public float distanceSmoothSpeed = 5f;
+        public float heightSmoothSpeed = 5f;
 
         [Header("Collision")]
         [Tooltip("Radio de detección de colisiones")]

@@ -1,4 +1,5 @@
 using GTAFramework.Vehicle.Components;
+using GTAFramework.Vehicle.Interfaces;
 
 namespace GTAFramework.Vehicle.States
 {
@@ -8,11 +9,11 @@ namespace GTAFramework.Vehicle.States
     /// </summary>
     public abstract class VehicleState
     {
-        protected VehicleController _controller;
+        protected readonly IVehicleContext _context;
 
-        public VehicleState(VehicleController controller)
+        public VehicleState(IVehicleContext controller)
         {
-            _controller = controller;
+            _context = controller;
         }
 
         /// <summary>
@@ -34,7 +35,7 @@ namespace GTAFramework.Vehicle.States
         /// Verifica si debe cambiar a otro estado.
         /// </summary>
         /// <returns>El nuevo estado, o null para permanecer en el actual.</returns>
-        public abstract VehicleState CheckTransitions();
+        public abstract string CheckTransitions();
 
         /// <summary>
         /// Obtiene el nombre del estado para debugging.

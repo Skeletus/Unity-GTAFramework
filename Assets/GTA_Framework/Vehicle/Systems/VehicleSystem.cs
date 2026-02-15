@@ -16,114 +16,103 @@ namespace GTAFramework.Vehicle.Systems
 
         [Inject] private InputService _inputService;
 
-        private VehicleController _currentVehicle;
-        private IDriver _player;
+        // Configuración
+        private readonly float _interactionRange = 3f;
 
-        // Commands
-        private AccelerateCommand _accelerateCommand;
-        private SteerCommand _steerCommand;
-        private BrakeCommand _brakeCommand;
+        // Componentes delegados
+        private VehicleRegistry _registry;
+        private VehicleEnterExitHandler _enterExitHandler;
+        private VehicleCommandExecutor _commandExecutor;
 
-        public bool IsPlayerInVehicle => _currentVehicle != null;
+        // Referencia al conductor actual
+        private IDriver _driver;
+
+        public bool IsPlayerInVehicle => _enterExitHandler?.IsInVehicle ?? false;
 
         public void Initialize()
         {
             _inputService = DIContainer.Instance.Resolve<InputService>();
-            Debug.Log("VehicleSystem initialized.");
 
-            // Buscar automáticamente el jugador
+            // Crear componentes
+            _registry = new VehicleRegistry();
+            _enterExitHandler = new VehicleEnterExitHandler(_registry, _interactionRange);
+            _commandExecutor = new VehicleCommandExecutor(_inputService);
+
+            // Registrar vehículos existentes en la escena
+            var vehicles = Object.FindObjectsByType<VehicleController>(FindObjectsSortMode.None);
+            foreach (var v in vehicles)
+            {
+                _registry.Register(v);
+            }
+
             var playerController = Object.FindFirstObjectByType<PlayerController>();
             if (playerController != null)
             {
-                _player = playerController;
-                Debug.Log($"VehicleSystem initialized. Player found: {playerController.name}");
+                SetDriver(playerController);
+                Debug.Log($"[VehicleSystem] Player found: {playerController.name}");
             }
             else
             {
-                Debug.LogWarning("VehicleSystem: No PlayerController found in scene!");
+                Debug.LogWarning("[VehicleSystem] No PlayerController found in scene!");
             }
+
+
+            Debug.Log($"[VehicleSystem] Initialized with {vehicles.Length} vehicles registered.");
+        }
+
+        public void SetDriver(IDriver driver)
+        {
+            _driver = driver;
+            _enterExitHandler?.SetDriver(driver);
         }
 
         public void Tick(float deltaTime)
         {
-            if (_player == null) return;
-            
+            if (_driver == null) return;
+
             if (_inputService.IsInteractPressed)
             {
                 _inputService.IsInteractPressed = false;
-
-                if (IsPlayerInVehicle)
-                    ExitVehicle();
-                else
-                    TryEnterNearestVehicle();
+                HandleInteraction();
             }
 
-            // Ejecutar comandos de conducción si está en un vehículo
-            if (IsPlayerInVehicle && _currentVehicle.Physics != null)
+            // Ejecutar comandos si está en vehículo
+            if (IsPlayerInVehicle)
             {
-                _accelerateCommand?.Execute(deltaTime);
-                _steerCommand?.Execute(deltaTime);
-                _brakeCommand?.Execute(deltaTime);
+                _commandExecutor?.ExecuteCommands(deltaTime);
             }
         }
 
-        public void SetPlayer(IDriver player) => _player = player;
-
-        private void TryEnterNearestVehicle()
+        private void HandleInteraction()
         {
-            var vehicles = Object.FindObjectsByType<VehicleController>(FindObjectsSortMode.None);
-            VehicleController nearest = null;
-            float nearestDist = 3f; // Rango máximo
-
-            foreach (var v in vehicles)
+            if (IsPlayerInVehicle)
             {
-                if (v.IsOccupied || v.IsDestroyed) continue;
-
-                float dist = Vector3.Distance(_player.Transform.position, v.transform.position);
-                if (dist < nearestDist)
-                {
-                    nearestDist = dist;
-                    nearest = v;
-                }
+                ExitVehicle();
             }
-
-            if (nearest != null)
-                EnterVehicle(nearest);
+            else
+            {
+                TryEnterVehicle();
+            }
         }
 
-        private void EnterVehicle(VehicleController vehicle)
+        private void TryEnterVehicle()
         {
-            // Verificación adicional por seguridad
-            if (vehicle.IsDestroyed)
+            if (_enterExitHandler.TryEnterNearest())
             {
-                Debug.Log($"[VehicleSystem] Cannot enter destroyed vehicle: {vehicle.name}");
-                return;
+                _commandExecutor.SetVehicle(_enterExitHandler.CurrentVehicle);
             }
-
-            _currentVehicle = vehicle;
-            vehicle.Enter(_player);
-
-            InitializeCommands();
         }
 
         private void ExitVehicle()
         {
-            _currentVehicle?.Exit();
-            _currentVehicle = null;
-
-            _accelerateCommand = null;
-            _steerCommand = null;
-            _brakeCommand = null;
+            _enterExitHandler.Exit();
+            _commandExecutor.Clear();
         }
 
-        private void InitializeCommands()
-        {
-            if (_currentVehicle == null || _inputService == null) return;
+        // ========== VEHICLE REGISTRATION (para vehículos que se instancian dinámicamente) ==========
 
-            _accelerateCommand = new AccelerateCommand(_currentVehicle, _inputService);
-            _steerCommand = new SteerCommand(_currentVehicle, _inputService);
-            _brakeCommand = new BrakeCommand(_currentVehicle, _inputService);
-        }
+        public void RegisterVehicle(VehicleController vehicle) => _registry.Register(vehicle);
+        public void UnregisterVehicle(VehicleController vehicle) => _registry.Unregister(vehicle);
 
         public void LateTick(float deltaTime) { }
         public void FixedTick(float fixedDeltaTime) { }

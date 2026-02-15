@@ -25,7 +25,7 @@ namespace GTAFramework.Vehicle.Commands
             if (_controller?.Physics == null || _input == null) return;
 
             float forwardSpeed = Vector3.Dot(_controller.Rigidbody.linearVelocity, _controller.Transform.forward);
-            bool isMovingForward = forwardSpeed > 0.5f;
+            bool isMovingForward = forwardSpeed > _controller.Data.SPEED_THRESHOLD;
 
             // Solo aplicar freno si:
             // 1. Se presiona S (input.y negativo)

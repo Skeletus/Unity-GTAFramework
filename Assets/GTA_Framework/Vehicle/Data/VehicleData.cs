@@ -12,6 +12,9 @@ namespace GTAFramework.Vehicle.Data
 
         [Header("Physics - Basic")]
         public float mass = 1500f;
+        public float DIRECTION_THRESHOLD = 0.5f;
+        public float INPUT_DEADZONE = 0.1f;
+        public float HANDBRAKE_MULTIPLIER = 3f;
 
         [Header("Wheels")]
         public float wheelRadius = 0.35f;
@@ -27,6 +30,7 @@ namespace GTAFramework.Vehicle.Data
         public float maxBrakeTorque = 300f;
         public float engineBrakeTorque = 50f;
         public float maxSpeed = 30f; // m/s (= 108 km/h)
+        public float SPEED_THRESHOLD = 0.1f;
 
         [Header("Reverse")]
         public float reverseDelay = 1.5f; // Segundos de espera antes de reversar

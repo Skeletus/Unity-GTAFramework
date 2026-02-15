@@ -1,5 +1,10 @@
 using UnityEngine;
 using GTAFramework.GTACamera.Data;
+using GTAFramework.GTACamera.Interfaces;
+using GTAFramework.GTACamera.Strategies.Collision;
+using GTAFramework.GTACamera.Strategies.Zoom;
+using System.Collections.Generic;
+using GTAFramework.GTACamera.States;
 
 namespace GTAFramework.GTACamera.Components
 {
@@ -10,24 +15,26 @@ namespace GTAFramework.GTACamera.Components
         [SerializeField] private Transform _target;
         [SerializeField] private Transform _cameraPivot; // Punto donde la cámara mira
 
-        [Header("Runtime Info (Read Only)")]
-        [SerializeField] private float _currentDistance;
-        [SerializeField] private float _currentHeight;
-        [SerializeField] private float _currentYaw;
-        [SerializeField] private float _currentPitch;
+        [Header("Strategies")]
+        [SerializeReference] private ICameraCollisionHandler _collisionHandler;
+        [SerializeReference] private IZoomStrategy _zoomStrategy;
+
+        // State Pattern
+        private ICameraState _currentState;
+        private Dictionary<string, ICameraState> _states;
+        private StateTransitionContext _context;
+        private CameraRuntimeData _runtimeData;
 
         private UnityEngine.Camera _camera;
-        private float _targetDistance;
-        private float _targetHeight;
-        private Vector3 _desiredPosition;
-        private float _dynamicZoomOffset;
 
         // Propiedades públicas
         public CameraSettingsData Settings => _cameraSettings;
         public Transform Target => _target;
         public Transform CameraPivot => _cameraPivot;
-        public float CurrentYaw => _currentYaw;
-        public float CurrentPitch => _currentPitch;
+        public float CurrentYaw => _runtimeData?.CurrentYaw ?? 0f;
+        public float CurrentPitch => _runtimeData?.CurrentPitch ?? 0f;
+        public string CurrentStateName => _currentState?.StateName ?? "None";
+        public CameraRuntimeData RuntimeData => _runtimeData;
 
         private void Awake()
         {
@@ -38,156 +45,158 @@ namespace GTAFramework.GTACamera.Components
                 Debug.LogError("ThirdPersonCamera: Camera component not found!");
             }
 
-            // Inicializar valores
+            // Inicializar estrategias
+            _collisionHandler ??= new SphereCastCollisionHandler();
+            _zoomStrategy ??= new DownwardZoomStrategy();
+
+            // 1. PRIMERO: Inicializar runtime data
+            InitializeRuntimeData();
+
+            // 2. SEGUNDO: Crear pivot (ANTES de inicializar estados)
+            CreateOrFindPivot();
+
+            // 3. TERCERO: Inicializar estados (después del pivot)
+            InitializeStates();
+        }
+
+        private void InitializeRuntimeData()
+        {
+            _runtimeData = new CameraRuntimeData();
+
             if (_cameraSettings != null)
             {
-                _currentDistance = _cameraSettings.normalDistance;
-                _currentHeight = _cameraSettings.normalHeight;
-                _targetDistance = _currentDistance;
-                _targetHeight = _currentHeight;
+                _runtimeData.ResetToDefault(_cameraSettings);
             }
+        }
 
-            // Crear pivot si no existe
-            if (_cameraPivot == null && _target != null)
+        private void InitializeStates()
+        {
+            // Crear contexto de transición
+            _context = new StateTransitionContext
             {
-                GameObject pivotObj = new GameObject("CameraPivot");
+                Settings = _cameraSettings,
+                RuntimeData = _runtimeData,
+                ZoomStrategy = _zoomStrategy,
+                CollisionHandler = _collisionHandler,
+                Target = _target,
+                CameraPivot = _cameraPivot
+            };
+
+            // Crear diccionario de estados
+            _states = new Dictionary<string, ICameraState>
+            {
+                { "Normal", new NormalCameraState() },
+                { "Aiming", new AimingCameraState() },
+                { "Cinematic", new CinematicCameraState() }
+            };
+
+            // Entrar al estado inicial
+            SetState("Normal");
+        }
+
+        private void CreateOrFindPivot()
+        {
+            if (_target == null) return;
+
+            var existingPivot = _target.Find("CameraPivot");
+            if (existingPivot != null)
+            {
+                _cameraPivot = existingPivot;
+            }
+            else if (_cameraPivot == null)
+            {
+                var pivotObj = new GameObject("CameraPivot");
                 _cameraPivot = pivotObj.transform;
                 _cameraPivot.SetParent(_target);
                 _cameraPivot.localPosition = Vector3.up * _cameraSettings.pivotYOffset;
             }
         }
 
+        /// <summary>
+        /// Cambia el estado actual de la cámara.
+        /// </summary>
+        /// <param name="stateName">Nombre del estado: "Normal", "Aiming", "Cinematic"</param>
+        public void SetState(string stateName)
+        {
+            if (!_states.TryGetValue(stateName, out var newState))
+            {
+                Debug.LogWarning($"ThirdPersonCamera: State '{stateName}' not found!");
+                return;
+            }
+
+            // Salir del estado actual
+            _currentState?.Exit();
+
+            // Cambiar al nuevo estado
+            _currentState = newState;
+
+            // Actualizar contexto con valores actuales
+            _context.Target = _target;
+            _context.CameraPivot = _cameraPivot;
+
+            // Entrar al nuevo estado
+            _currentState.Enter(_context);
+
+            Debug.Log($"ThirdPersonCamera: Changed to state '{stateName}'");
+        }
+
         public void SetTarget(Transform target)
         {
             _target = target;
+            CreateOrFindPivot();
 
-            // Reposicionar pivot
-            if (_cameraPivot != null && _target != null)
+            // Actualizar contexto
+            if (_context != null)
             {
-                _cameraPivot.SetParent(_target);
-                _cameraPivot.localPosition = Vector3.up * _cameraSettings.pivotYOffset;
+                _context.Target = _target;
+                _context.CameraPivot = _cameraPivot;
             }
         }
 
         public void RotateCamera(Vector2 lookInput)
         {
-            if (_cameraSettings == null) return;
-
-            // Rotar horizontalmente (yaw)
-            _currentYaw += lookInput.x * _cameraSettings.horizontalSensitivity;
-
-            // Rotar verticalmente (pitch)
-            _currentPitch -= lookInput.y * _cameraSettings.verticalSensitivity;
-            _currentPitch = Mathf.Clamp(_currentPitch, _cameraSettings.minVerticalAngle, _cameraSettings.maxVerticalAngle);
-
-            // Calcular el zoom dinámico estilo GTA
-            CalculateDynamicZoom();
+            // Delegar al estado actual
+            _currentState?.HandleRotation(lookInput);
         }
 
         public void UpdateCameraPosition()
         {
-            if (_target == null || _cameraPivot == null || _cameraSettings == null) return;
+            if (_target == null || _cameraPivot == null || _cameraSettings == null || _currentState == null) return;
 
-            // Calcular la posición deseada
-            Quaternion rotation = Quaternion.Euler(_currentPitch, _currentYaw, 0);
+            // El estado actualiza su lógica interna
+            _currentState?.Update(Time.deltaTime);
 
-            // Aplicar el zoom dinámico basado en el ángulo vertical
-            float effectiveDistance = _targetDistance + _dynamicZoomOffset;
+            // Obtener posición y rotación del estado
+            Vector3 desiredPosition = _currentState.GetDesiredPosition();
+            Quaternion desiredRotation = _currentState.GetDesiredRotation();
 
-            Vector3 offset = rotation * new Vector3(0, _targetHeight, -effectiveDistance);
-            _desiredPosition = _cameraPivot.position + offset;
-
-            // Detectar colisiones
-            Vector3 finalPosition = HandleCameraCollision(_cameraPivot.position, _desiredPosition);
-
-            // Suavizar el movimiento
+            // Aplicar con suavizado
             transform.position = Vector3.Lerp(
                 transform.position,
-                finalPosition,
+                desiredPosition,
                 _cameraSettings.positionSmoothSpeed * Time.deltaTime
             );
 
-            // Actualizar la rotación para mirar al pivot
-            Quaternion targetRotation = Quaternion.LookRotation(_cameraPivot.position - transform.position);
             transform.rotation = Quaternion.Slerp(
                 transform.rotation,
-                targetRotation,
+                desiredRotation,
                 _cameraSettings.rotationSmoothSpeed * Time.deltaTime
             );
-
-            // Actualizar valores actuales suavemente
-            _currentDistance = Mathf.Lerp(_currentDistance, _targetDistance, Time.deltaTime * 5f);
-            _currentHeight = Mathf.Lerp(_currentHeight, _targetHeight, Time.deltaTime * 5f);
-        }
-
-        private void CalculateDynamicZoom()
-        {
-            // Estilo GTA: cuando miras hacia abajo, la cámara se acerca
-            if (_currentPitch > _cameraSettings.downwardZoomStartAngle)
-            {
-                float normalizedAngle = (_currentPitch - _cameraSettings.downwardZoomStartAngle) /
-                                       (_cameraSettings.maxVerticalAngle - _cameraSettings.downwardZoomStartAngle);
-
-                float maxZoom = _targetDistance * _cameraSettings.downwardZoomFactor;
-                float targetZoom = -Mathf.Lerp(0, maxZoom, normalizedAngle);
-
-                _dynamicZoomOffset = Mathf.Lerp(
-                    _dynamicZoomOffset,
-                    targetZoom,
-                    _cameraSettings.zoomTransitionSpeed * Time.deltaTime
-                );
-            }
-            else
-            {
-                _dynamicZoomOffset = Mathf.Lerp(
-                    _dynamicZoomOffset,
-                    0,
-                    _cameraSettings.zoomTransitionSpeed * Time.deltaTime
-                );
-            }
-        }
-
-        private Vector3 HandleCameraCollision(Vector3 from, Vector3 to)
-        {
-            Vector3 direction = to - from;
-            float distance = direction.magnitude;
-
-            if (Physics.SphereCast(
-                from,
-                _cameraSettings.collisionRadius,
-                direction.normalized,
-                out RaycastHit hit,
-                distance,
-                _cameraSettings.collisionLayers,
-                QueryTriggerInteraction.Ignore))
-            {
-                // Ajustar la posición para evitar el clipping
-                float adjustedDistance = hit.distance - _cameraSettings.collisionOffset;
-                adjustedDistance = Mathf.Max(adjustedDistance, _cameraSettings.minDistance);
-
-                return from + direction.normalized * adjustedDistance;
-            }
-
-            return to;
         }
 
         public void SetDistance(float distance)
         {
-            _targetDistance = Mathf.Clamp(distance, _cameraSettings.minDistance, _cameraSettings.maxDistance);
+            _runtimeData.TargetDistance = Mathf.Clamp(distance, _cameraSettings.minDistance, _cameraSettings.maxDistance);
         }
 
         public void SetHeight(float height)
         {
-            _targetHeight = Mathf.Clamp(height, _cameraSettings.minHeight, _cameraSettings.maxHeight);
+            _runtimeData.TargetHeight = Mathf.Clamp(height, _cameraSettings.minHeight, _cameraSettings.maxHeight);
         }
 
         public void ResetToDefault()
         {
-            if (_cameraSettings != null)
-            {
-                _targetDistance = _cameraSettings.normalDistance;
-                _targetHeight = _cameraSettings.normalHeight;
-            }
+            _runtimeData?.ResetToDefault(_cameraSettings);
         }
 
         // Método para obtener la dirección forward de la cámara (útil para el movimiento del jugador)
@@ -226,6 +235,20 @@ namespace GTAFramework.GTACamera.Components
             // Dibujar el radio de colisión
             Gizmos.color = Color.yellow;
             Gizmos.DrawWireSphere(transform.position, _cameraSettings?.collisionRadius ?? 0.3f);
+
+            // NUEVO: Mostrar estado actual
+            Gizmos.color = Color.cyan;
+            if (_currentState != null)
+            {
+                // Dibujar nombre del estado (solo visible en Scene view)
+#if UNITY_EDITOR
+                UnityEditor.Handles.Label(
+                    transform.position + Vector3.up * 0.5f,
+                    $"State: {CurrentStateName}"
+                );
+#endif
+            }
+
         }
     }
 }

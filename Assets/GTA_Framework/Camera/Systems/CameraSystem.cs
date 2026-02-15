@@ -14,6 +14,10 @@ namespace GTAFramework.GTACamera.Systems
         [Inject] private InputService _inputService;
         private Components.ThirdPersonCamera _thirdPersonCamera;
 
+        // Propiedades públicas
+        public ThirdPersonCamera Camera => _thirdPersonCamera;
+        public string CurrentState => _thirdPersonCamera?.CurrentStateName ?? "None";
+
         public void Initialize()
         {
             _inputService = DIContainer.Instance.Resolve<InputService>();
@@ -58,17 +62,89 @@ namespace GTAFramework.GTACamera.Systems
             Debug.Log("CameraSystem shutdown.");
         }
 
-        public void SetCameraTarget(Transform target)
+        #region State Management
+
+        /// <summary>
+        /// Cambia la cámara al estado Normal.
+        /// </summary>
+        public void SetNormalMode()
         {
-            if (_thirdPersonCamera != null)
-            {
-                _thirdPersonCamera.SetTarget(target);
-            }
+            _thirdPersonCamera?.SetState("Normal");
         }
 
-        public Components.ThirdPersonCamera GetCamera()
+        /// <summary>
+        /// Cambia la cámara al estado Aiming (apuntado).
+        /// </summary>
+        public void SetAimingMode()
         {
-            return _thirdPersonCamera;
+            _thirdPersonCamera?.SetState("Aiming");
         }
+
+        /// <summary>
+        /// Cambia la cámara al estado Cinematic.
+        /// </summary>
+        public void SetCinematicMode()
+        {
+            _thirdPersonCamera?.SetState("Cinematic");
+        }
+
+        /// <summary>
+        /// Cambia el estado de la cámara por nombre.
+        /// </summary>
+        /// <param name="stateName">"Normal", "Aiming", o "Cinematic"</param>
+        public void SetCameraState(string stateName)
+        {
+            _thirdPersonCamera?.SetState(stateName);
+        }
+
+        #endregion
+
+        #region Camera Configuration
+
+        /// <summary>
+        /// Ajusta la distancia de la cámara (zoom).
+        /// </summary>
+        public void SetCameraDistance(float distance)
+        {
+            _thirdPersonCamera?.SetDistance(distance);
+        }
+
+        /// <summary>
+        /// Ajusta la altura de la cámara.
+        /// </summary>
+        public void SetCameraHeight(float height)
+        {
+            _thirdPersonCamera?.SetHeight(height);
+        }
+
+        /// <summary>
+        /// Resetea la cámara a sus valores por defecto.
+        /// </summary>
+        public void ResetCameraToDefault()
+        {
+            _thirdPersonCamera?.ResetToDefault();
+        }
+
+        #endregion
+
+        #region Utility
+
+        /// <summary>
+        /// Obtiene la dirección forward de la cámara (plano XZ).
+        /// </summary>
+        public Vector3 GetCameraForwardDirection()
+        {
+            return _thirdPersonCamera?.GetForwardDirection() ?? Vector3.forward;
+        }
+
+        /// <summary>
+        /// Obtiene la dirección right de la cámara (plano XZ).
+        /// </summary>
+        public Vector3 GetCameraRightDirection()
+        {
+            return _thirdPersonCamera?.GetRightDirection() ?? Vector3.right;
+        }
+
+        #endregion
     }
 }

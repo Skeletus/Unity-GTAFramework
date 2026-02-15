@@ -3,124 +3,49 @@ using GTAFramework.Vehicle.Data;
 using GTAFramework.Vehicle.Components.Wheels;
 using GTAFramework.Vehicle.Interfaces;
 using GTAFramework.Vehicle.States;
-using static UnityEngine.UI.Image;
+using System.Linq;
+using GTAFramework.Vehicle.Components.VehicleCollision;
+using GTAFramework.Vehicle.StateMachine;
+using System;
+using GTAFramework.Player.Components.States;
+using GTAFramework.Vehicle.VehicleDriverManager;
 
 namespace GTAFramework.Vehicle.Components
 {
     [RequireComponent(typeof(Rigidbody))]
-    public class VehicleController : MonoBehaviour, IVehicle
+    public class VehicleController : MonoBehaviour, IVehicle, IVehicleContext
     {
         [Header("References")]
         [SerializeField] private VehicleData _data;
         [SerializeField] private WheelController[] _wheels;
         [SerializeField] private MeshFilter _bodyMesh;
-
-        [Header("Seats")]
         [SerializeField] private Transform _driverSeat;
-
-        [Header("Ground Detection")]
-        [SerializeField] private LayerMask _groundMask = -1;
-        [SerializeField] private float _groundCheckDistance = 0.5f;
-
-        [Header("Stability")]
         [SerializeField] private Vector3 _centerOfMass = new Vector3(0f, -0.5f, 0f);
 
+        // Componentes inyectados
         private Rigidbody _rb;
+        private IVehicleStateMachine _stateMachine;
+        private IDriverManager _driverManager;
         private VehiclePhysics _physics;
-        private IDriver _currentDriver;
+        private IVehicleDamage _damage;
+        private IVehicleCollisionHandler _collisionHandler;
 
-        // ========== STATE MACHINE ==========
-        private VehicleState _currentState;
-        public ParkedState ParkedState { get; private set; }
-        public DrivingState DrivingState { get; private set; }
-        public Vehicle_AirborneState AirborneState { get; private set; }
-
-        // Campo privado
-        private VehicleDamage _damage;
-
-        [Header("Debug")]
-        [SerializeField] private bool _showStateDebug = true;
-        [SerializeField] private float _currentSpeedDebug;
-        private string _currentStateName = "";
-
-        // Propiedades públicas
-        public VehicleData Data => _data;
-        public Rigidbody Rigidbody => _rb;
-        public WheelController[] Wheels => _wheels;
-        public IDriver CurrentDriver => _currentDriver;
-        public VehiclePhysics Physics => _physics;
-        public VehicleState CurrentState => _currentState;
-        public DestroyedState DestroyedState { get; private set; }
-        public string CurrentStateName => _currentStateName;
-        // Propiedad pública
-        public VehicleDamage Damage => _damage;
+        // Propiedades públicas (delegación)
+        public bool IsOccupied => _driverManager?.IsOccupied ?? false;
+        public bool IsGrounded => _wheels?.Any(w => w.IsGrounded) ?? false;
         public bool IsDestroyed => _damage?.IsDestroyed ?? false;
+        public float CurrentSpeed => CalculateSpeed();
 
-
-        // IVehicle implementation
-        public bool IsOccupied => _currentDriver != null;
         public Transform Transform => transform;
 
-        // Ground detection
-        public bool IsGrounded { get; private set; }
-        // Umbral mínimo de velocidad (0.1 m/s = casi detenido)
-        private const float SPEED_THRESHOLD = 0.1f;
+        public IVehiclePhysics Physics => _physics;
+        public Rigidbody Rigidbody => _rb;
+        public WheelController[] Wheels => _wheels;
+        public VehicleData Data => _data;
 
-        public float CurrentSpeed
-        {
-            get
-            {
-                if (_rb == null) return 0f;
+        public void Enter(IDriver driver) => _driverManager?.Enter(driver);
+        public void Exit() => _driverManager?.Exit();
 
-                float rawSpeed = _rb.linearVelocity.magnitude;
-
-                // Si la velocidad es menor al umbral, considerar como detenido
-                if (rawSpeed < SPEED_THRESHOLD) return 0f;
-
-                // Redondear a 1 decimal
-                return Mathf.Round(rawSpeed * 10f) / 10f;
-            }
-        }
-
-        public void Enter(IDriver driver)
-        {
-            if (IsOccupied) return;
-
-            // No permitir entrar si está destruido
-            if (IsDestroyed)
-            {
-                Debug.Log($"[VehicleController] Cannot enter destroyed vehicle: {name}");
-                return;
-            }
-
-            _currentDriver = driver;
-            driver.OnVehicleEnter(this);
-
-            if (_driverSeat != null)
-            {
-                driver.Transform.position = _driverSeat.position;
-                driver.Transform.rotation = _driverSeat.rotation;
-                driver.Transform.SetParent(_driverSeat);
-            }
-
-            Debug.Log($"[VehicleController] {driver.Transform.name} entered vehicle {name}");
-        }
-
-        public void Exit()
-        {
-            if (!IsOccupied) return;
-
-            Vector3 exitPosition = transform.position + transform.right * 2f;
-
-            _currentDriver.Transform.SetParent(null);
-            _currentDriver.Transform.position = exitPosition;
-            _currentDriver.Transform.rotation = Quaternion.identity;
-
-            _currentDriver.OnVehicleExit(this);
-            Debug.Log($"[VehicleController] Driver exited vehicle {name}");
-
-            _currentDriver = null;
-        }
 
         private void Awake()
         {
@@ -129,147 +54,72 @@ namespace GTAFramework.Vehicle.Components
 
         private void Start()
         {
-            InitializeVehicle();
-            InitializeStateMachine();
+            InitializeComponents();
+            _stateMachine.TransitionTo(VehicleStateNames.Parked);
         }
 
         private void Update()
         {
-            _currentSpeedDebug = CurrentSpeed;
-            UpdateGroundDetection();
-            UpdateStateMachine();
+            _stateMachine?.Update();
         }
 
         private void FixedUpdate()
         {
-            if (IsDestroyed)
-            {
-                // Mantener freno de mano activo
-                if (_physics != null)
-                {
-                    _physics.Handbrake = true;
-                }
-                return;
-            }
-
-            // Solo procesar física si hay un conductor
-            if (IsOccupied && _physics != null)
-            {
-                _physics.FixedUpdate();
-            }
+            if (IsDestroyed) { _physics.Handbrake = true; return; }
+            if (IsOccupied) _physics?.FixedUpdate();
         }
 
-        private void InitializeVehicle()
+        private void InitializeComponents()
         {
             if (_data == null) return;
 
+            // 1. Configurar Rigidbody
             _rb.mass = _data.mass;
             _rb.centerOfMass = _centerOfMass;
             _rb.interpolation = RigidbodyInterpolation.Interpolate;
             _rb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
 
-            _physics = new VehiclePhysics(this, _rb, _data);
+            // 2. Crear componentes del vehículo
+            _physics = new VehiclePhysics(this, _rb, _data, _wheels);
 
             _damage = new VehicleDamage(this, _data, _bodyMesh);
             _damage.OnDestroy += HandleVehicleDestroyed;
 
+            // 3. Crear managers (composición)
+            _driverManager = new DriverManager(this, _driverSeat, () => !IsDestroyed);
+            _collisionHandler = new VehicleCollisionHandler(_damage, () => IsDestroyed);
+
+            // 4. Crear máquina de estados
+            _stateMachine = new VehicleStateMachine();
+            _stateMachine.RegisterState(VehicleStateNames.Parked, new ParkedState(this));
+            _stateMachine.RegisterState(VehicleStateNames.Driving, new DrivingState(this));
+            _stateMachine.RegisterState(VehicleStateNames.Airborne, new VehicleAirborneState(this));
+            _stateMachine.RegisterState(VehicleStateNames.Destroyed, new DestroyedState(this));
+
+            // 5. Configurar ruedas
             foreach (var wheel in _wheels)
             {
                 wheel.Configure(_data);
             }
         }
 
-        // ========== STATE MACHINE ==========
-
-        private void InitializeStateMachine()
+        private float CalculateSpeed()
         {
-            ParkedState = new ParkedState(this);
-            DrivingState = new DrivingState(this);
-            AirborneState = new Vehicle_AirborneState(this);
-            DestroyedState = new DestroyedState(this);
+            if (_rb == null) return 0f;
 
-            // Estado inicial: Parked
-            _currentState = ParkedState;
-            _currentStateName = _currentState.GetStateName();
-            _currentState.Enter();
+            float rawSpeed = _rb.linearVelocity.magnitude;
 
-            if (_showStateDebug)
-                Debug.Log($"[VehicleController] State Machine initialized. Initial state: {_currentStateName}");
+            // Si la velocidad es menor al umbral, considerar como detenido
+            if (rawSpeed < _data.SPEED_THRESHOLD) return 0f;
+
+            // Redondear a 1 decimal
+            return Mathf.Round(rawSpeed * 10f) / 10f;
         }
 
-        private void UpdateStateMachine()
-        {
-            if (_currentState == null) return;
-
-            _currentState.Update();
-
-            VehicleState nextState = _currentState.CheckTransitions();
-
-            if (nextState != null && nextState != _currentState)
-            {
-                TransitionToState(nextState);
-            }
-        }
-
-        private void TransitionToState(VehicleState newState)
-        {
-            if (newState == null || newState == _currentState) return;
-
-            string previousStateName = _currentStateName;
-
-            _currentState.Exit();
-            _currentState = newState;
-            _currentStateName = _currentState.GetStateName();
-            _currentState.Enter();
-
-            if (_showStateDebug)
-                Debug.Log($"[VehicleController] State transition: {previousStateName} → {_currentStateName}");
-        }
-
-        /// <summary>
-        /// Fuerza una transición de estado (útil para sistemas externos).
-        /// </summary>
-        public void ForceState(VehicleState newState)
-        {
-            if (newState != null)
-                TransitionToState(newState);
-        }
-
-        // Nuevo método para colisiones
         private void OnCollisionEnter(Collision collision)
-        {
-            // No procesar si ya está destruido
-            if (IsDestroyed) return;
+        => _collisionHandler?.HandleCollision(collision);
 
-            // Solo procesar colisiones significativas
-            float impactForce = collision.relativeVelocity.magnitude;
-            if (impactForce > 5f) // Umbral mínimo de impacto
-            {
-                _damage?.HandleCollision(collision);
-            }
-        }
-
-        // Nuevo método para evento de destrucción
         private void HandleVehicleDestroyed()
-        {
-            // Transicionar a DestroyedState
-            ForceState(DestroyedState);
-        }
-
-        // ========== GROUND DETECTION ==========
-
-        private void UpdateGroundDetection()
-        {
-            // Raycast desde el centro del vehículo hacia abajo
-            IsGrounded = false;
-            foreach (var wheel in _wheels)
-            {
-                if (wheel.IsGrounded)
-                {
-                    IsGrounded = true;
-                    break;
-                }
-            }
-        }
+            => _stateMachine?.TransitionTo(VehicleStateNames.Destroyed);
     }
 }

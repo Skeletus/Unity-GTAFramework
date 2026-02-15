@@ -1,5 +1,6 @@
 using UnityEngine;
 using GTAFramework.Vehicle.Components;
+using GTAFramework.Vehicle.Interfaces;
 
 namespace GTAFramework.Vehicle.States
 {
@@ -8,11 +9,11 @@ namespace GTAFramework.Vehicle.States
     /// </summary>
     public class DrivingState : VehicleState
     {
-        public DrivingState(VehicleController controller) : base(controller) { }
+        public DrivingState(IVehicleContext context) : base(context) { }
 
         public override void Enter()
         {
-            Debug.Log($"[VehicleState] {_controller.name} is now DRIVING");
+            Debug.Log($"[VehicleState] {_context.Transform.name} is now DRIVING");
         }
 
         public override void Update()
@@ -22,21 +23,21 @@ namespace GTAFramework.Vehicle.States
 
         public override void Exit()
         {
-            Debug.Log($"[VehicleState] {_controller.name} leaving DRIVING state");
+            Debug.Log($"[VehicleState] {_context.Transform.name} leaving DRIVING state");
         }
 
-        public override VehicleState CheckTransitions()
+        public override string CheckTransitions()
         {
             // Si no hay conductor, cambiar a ParkedState
-            if (!_controller.IsOccupied)
+            if (!_context.IsOccupied)
             {
-                return _controller.ParkedState;
+                return VehicleStateNames.Parked;
             }
 
             // Si el vehículo está en el aire, cambiar a AirborneState
-            if (!_controller.IsGrounded && _controller.CurrentSpeed > 5f)
+            if (!_context.IsGrounded && _context.CurrentSpeed > 5f)
             {
-                return _controller.AirborneState;
+                return VehicleStateNames.Airborne;
             }
 
             // Permanecer en DrivingState

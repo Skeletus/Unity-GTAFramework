@@ -1,5 +1,6 @@
 using UnityEngine;
 using GTAFramework.Vehicle.Components;
+using GTAFramework.Vehicle.Interfaces;
 
 namespace GTAFramework.Vehicle.States
 {
@@ -7,18 +8,18 @@ namespace GTAFramework.Vehicle.States
     /// Estado cuando el vehículo está en el aire (saltó una rampa).
     /// No se puede controlar la dirección en este estado.
     /// </summary>
-    public class Vehicle_AirborneState : VehicleState
+    public class VehicleAirborneState : VehicleState
     {
-        public Vehicle_AirborneState(VehicleController controller) : base(controller) { }
+        public VehicleAirborneState(IVehicleContext context) : base(context) { }
 
         public override void Enter()
         {
-            Debug.Log($"[VehicleState] {_controller.name} is now AIRBORNE - No steering control!");
+            Debug.Log($"[VehicleState] {_context.Transform.name} is now AIRBORNE - No steering control!");
 
             // Desactivar el control de dirección
-            if (_controller.Physics != null)
+            if (_context.Physics != null)
             {
-                _controller.Physics.SteerInput = 0f;
+                _context.Physics.SteerInput = 0f;
             }
         }
 
@@ -30,21 +31,21 @@ namespace GTAFramework.Vehicle.States
 
         public override void Exit()
         {
-            Debug.Log($"[VehicleState] {_controller.name} landed - Steering control restored!");
+            Debug.Log($"[VehicleState] {_context.Transform.name} landed - Steering control restored!");
         }
 
-        public override VehicleState CheckTransitions()
+        public override string CheckTransitions()
         {
             // Si el vehículo aterrizó, volver a DrivingState
-            if (_controller.IsGrounded)
+            if (_context.IsGrounded)
             {
-                return _controller.DrivingState;
+                return VehicleStateNames.Driving;
             }
 
             // Si no hay conductor (salió mientras estaba en el aire), ir a ParkedState
-            if (!_controller.IsOccupied)
+            if (!_context.IsOccupied)
             {
-                return _controller.ParkedState;
+                return VehicleStateNames.Parked;
             }
 
             // Permanecer en AirborneState
