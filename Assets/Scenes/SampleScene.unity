@@ -645,10 +645,15 @@ MonoBehaviour:
   _cameraSettings: {fileID: 11400000, guid: c4f87ed623be0f24b8f4b1a83a626171, type: 2}
   _target: {fileID: 866316591}
   _cameraPivot: {fileID: 0}
-  _currentDistance: 0
-  _currentHeight: 0
-  _currentYaw: 0
-  _currentPitch: 0
+  _collisionHandler:
+    rid: -2
+  _zoomStrategy:
+    rid: -2
+  references:
+    version: 2
+    RefIds:
+    - rid: -2
+      type: {class: , ns: , asm: }
 --- !u!1 &410087039
 GameObject:
   m_ObjectHideFlags: 0
@@ -1297,6 +1302,7 @@ GameObject:
   - component: {fileID: 866316592}
   - component: {fileID: 866316594}
   - component: {fileID: 866316595}
+  - component: {fileID: 866316596}
   m_Layer: 0
   m_Name: Player_
   m_TagString: Untagged
@@ -1355,13 +1361,13 @@ CharacterController:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Height: 2
-  m_Radius: 0.5
+  m_Height: 1.91
+  m_Radius: 0.28
   m_SlopeLimit: 45
   m_StepOffset: 0.3
-  m_SkinWidth: 0.05
-  m_MinMoveDistance: 0.001
-  m_Center: {x: 0, y: 1, z: 0}
+  m_SkinWidth: 0.03
+  m_MinMoveDistance: 0
+  m_Center: {x: 0, y: 0.93, z: 0}
 --- !u!114 &866316594
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1399,6 +1405,21 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
+--- !u!114 &866316596
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 866316590}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cc57d28fa2f6780449d18647f3416156, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::GTAFramework.Health.Components.HealthComponent
+  _healthData: {fileID: 0}
+  _damageInvulnerabilityDuration: 0
+  _startInvulnerable: 0
 --- !u!1 &895399744
 GameObject:
   m_ObjectHideFlags: 0
@@ -1685,6 +1706,69 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 954c09a7270ddad4cbbf2c1c6cc2953b, type: 3}
+--- !u!1 &1109558879
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1109558881}
+  - component: {fileID: 1109558880}
+  m_Layer: 0
+  m_Name: GameObject
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1109558880
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1109558879}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 37edfcd071b118e4fa2148aed4fe0d02, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TestDamageDealer
+  damageAmount: 25
+  damageType: 0
+  damageAction:
+    m_Name: Damage
+    m_Type: 1
+    m_ExpectedControlType: Button
+    m_Id: 7dc29def-aa4a-4c5e-9a24-86cac8bc9bf4
+    m_Processors: 
+    m_Interactions: 
+    m_SingletonActionBindings:
+    - m_Name: 
+      m_Id: 3498c78f-5e66-4258-85ee-9622375c806a
+      m_Path: <Keyboard>/o
+      m_Interactions: 
+      m_Processors: 
+      m_Groups: 
+      m_Action: Damage
+      m_Flags: 0
+    m_Flags: 0
+--- !u!4 &1109558881
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1109558879}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 4.3, y: 0.94482, z: -8.7}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1217696770
 GameObject:
   m_ObjectHideFlags: 0
@@ -2676,13 +2760,7 @@ MonoBehaviour:
   - {fileID: 1794114891094826002}
   _bodyMesh: {fileID: 7132326668953887487}
   _driverSeat: {fileID: 1360912825388921678}
-  _groundMask:
-    serializedVersion: 2
-    m_Bits: 4294967295
-  _groundCheckDistance: 0.5
   _centerOfMass: {x: 0, y: -0.9, z: 0}
-  _showStateDebug: 1
-  _currentSpeedDebug: 0
 --- !u!33 &467910622261690437
 MeshFilter:
   m_ObjectHideFlags: 0
@@ -4145,13 +4223,7 @@ MonoBehaviour:
   - {fileID: 895399747}
   _bodyMesh: {fileID: 3934814214372274559}
   _driverSeat: {fileID: 1021817670}
-  _groundMask:
-    serializedVersion: 2
-    m_Bits: 4294967295
-  _groundCheckDistance: 0.5
   _centerOfMass: {x: 0, y: -0.77, z: 0}
-  _showStateDebug: 1
-  _currentSpeedDebug: 0
 --- !u!54 &3934814214373601633
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -4937,3 +5009,4 @@ SceneRoots:
   - {fileID: 71241742}
   - {fileID: 5162717245626561868}
   - {fileID: 3934814214373601631}
+  - {fileID: 1109558881}

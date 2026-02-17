@@ -50,7 +50,13 @@ namespace GTAFramework.GTACamera.Data
         [Tooltip("Suavidad de la rotación")]
         [Range(1f, 30f)]
         public float rotationSmoothSpeed = 12f;
+
+        [Tooltip("Velocidad de suavizado de distancia")]
+        [Range(0.1f, 20f)]
         public float distanceSmoothSpeed = 5f;
+
+        [Tooltip("Velocidad de suavizado de altura")]
+        [Range(0.1f, 20f)]
         public float heightSmoothSpeed = 5f;
 
         [Header("Collision")]
@@ -79,5 +85,16 @@ namespace GTAFramework.GTACamera.Data
         [Header("Pivot Offset")]
         [Tooltip("Offset del pivot en Y (punto donde la cámara mira)")]
         public float pivotYOffset = 1.5f;
+
+        private void OnValidate()
+        {
+            if (minDistance > normalDistance)
+                normalDistance = minDistance;
+            if (normalDistance > maxDistance)
+                maxDistance = normalDistance;
+
+            distanceSmoothSpeed = Mathf.Max(0.1f, distanceSmoothSpeed);
+            heightSmoothSpeed = Mathf.Max(0.1f, heightSmoothSpeed);
+        }
     }
 }
