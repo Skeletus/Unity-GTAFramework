@@ -1,323 +1,233 @@
 using System;
-using GTAFramework.Core.Container;
-using GTAFramework.Health.Data;
-using GTAFramework.Health.Interfaces;
-using GTAFramework.Health.Events;
 using UnityEngine;
 
 namespace GTAFramework.Health.Components
 {
     /// <summary>
-    /// Main health component for the framework.
-    /// Handles damage, healing, armor, regeneration, and temporary invulnerability.
+    /// Componente de salud minimalista que maneja vida, armadura y daño.
+    /// Keep it simple, escalar cuando sea necesario.
     /// </summary>
     [DisallowMultipleComponent]
-    public class HealthComponent : MonoBehaviour, IDamageable
+    public class HealthComponent : MonoBehaviour
     {
-        [Header("Configuration")]
-        [SerializeField] private HealthData _healthData;
+        [Header("Health Settings")]
+        [SerializeField, Min(1f)] private float _maxHealth = 100f;
+        [SerializeField] private bool _startWithMaxHealth = true;
+
+        [Header("Armor Settings")]
+        [SerializeField, Min(0f)] private float _maxArmor = 100f;
+        [SerializeField, Range(0f, 1f)] private float _armorAbsorption = 0.75f;
+        [SerializeField, Min(0f)] private float _initialArmor = 0f;
+
+        [Header("Regeneration")]
+        [SerializeField] private bool _canRegenerate;
+        [SerializeField, Min(0f)] private float _regenRate = 5f;
+        [SerializeField, Min(0f)] private float _regenDelay = 3f;
 
         [Header("Invulnerability")]
-        [SerializeField, Min(0f)] private float _damageInvulnerabilityDuration = 0f;
-        [SerializeField] private bool _startInvulnerable;
+        [SerializeField, Min(0f)] private float _damageInvulnerabilityTime = 0f;
 
-        [Inject] private IHealthSystem _healthSystem;
-
-        private IArmor _armor;
+        // Runtime State
         private float _currentHealth;
+        private float _currentArmor;
+        private float _regenTimer;
+        private float _invulnerabilityTimer;
         private bool _isAlive;
-        private bool _manualInvulnerability;
-        private float _temporaryInvulnerabilityTimer;
-        private float _nextRegenAllowedTime;
-        private bool _isRegisteredInHealthSystem;
 
-        /// <summary>
-        /// Raised when this component takes damage.
-        /// The <see cref="DamageInfo"/> payload contains the final health damage.
-        /// </summary>
-        public event Action<DamageInfo> OnDamage;
-
-        /// <summary>
-        /// Raised once when this component dies.
-        /// </summary>
-        public event Action<HealthComponent> OnDeath;
-
-        /// <summary>
-        /// Raised when health is restored.
-        /// The value is the effective healed amount.
-        /// </summary>
-        public event Action<float> OnHeal;
-
-        /// <summary>
-        /// Raised when armor changes.
-        /// The value is the current armor amount.
-        /// </summary>
+        // Events
+        public event Action<float> OnDamageTaken;
+        public event Action<float> OnHealed;
         public event Action<float> OnArmorChanged;
+        public event Action OnDeath;
+        public event Action OnRevived;
 
-        /// <inheritdoc />
+        // Properties
         public float CurrentHealth => _currentHealth;
-
-        /// <inheritdoc />
-        public float MaxHealth => _healthData != null ? Mathf.Max(0f, _healthData.maxHealth) : 0f;
-
-        /// <inheritdoc />
-        public float CurrentArmor => _armor != null ? _armor.CurrentArmor : 0f;
-
-        /// <inheritdoc />
-        public float MaxArmor => _armor != null ? _armor.MaxArmor : 0f;
-
-        /// <inheritdoc />
+        public float MaxHealth => _maxHealth;
+        public float CurrentArmor => _currentArmor;
+        public float MaxArmor => _maxArmor;
         public bool IsAlive => _isAlive;
-
-        /// <inheritdoc />
-        public bool IsInvulnerable
-        {
-            get => _manualInvulnerability || _temporaryInvulnerabilityTimer > 0f;
-            set
-            {
-                _manualInvulnerability = value;
-                if (!value)
-                {
-                    _temporaryInvulnerabilityTimer = 0f;
-                }
-            }
-        }
-
-        /// <inheritdoc />
-        public bool HasArmor => _armor != null && _armor.HasArmor;
+        public bool HasArmor => _currentArmor > 0f;
+        public bool IsInvulnerable => _invulnerabilityTimer > 0f;
+        public float HealthPercent => _maxHealth > 0f ? _currentHealth / _maxHealth : 0f;
+        public float ArmorPercent => _maxArmor > 0f ? _currentArmor / _maxArmor : 0f;
 
         private void Awake()
         {
-            DIContainer.Instance.InjectDependencies(this);
-
-            _armor = GetComponent(typeof(IArmor)) as IArmor;
-            ResetHealthState();
-
-            if (_startInvulnerable)
+            if (_startWithMaxHealth)
             {
-                IsInvulnerable = true;
+                _currentHealth = _maxHealth;
             }
-        }
-
-        private void OnEnable()
-        {
-            TryRegisterInHealthSystem();
-        }
-
-        private void Start()
-        {
-            // Fallback in case health system was not available during Awake/OnEnable.
-            TryRegisterInHealthSystem();
+            _currentArmor = Mathf.Clamp(_initialArmor, 0f, _maxArmor);
+            _isAlive = _currentHealth > 0f;
         }
 
         private void Update()
         {
-            UpdateTemporaryInvulnerability(Time.deltaTime);
-            TryRegenerateHealth(Time.deltaTime);
+            UpdateInvulnerability(Time.deltaTime);
+            TryRegenerate(Time.deltaTime);
         }
 
-        private void OnDisable()
+        #region Public API
+
+        /// <summary>
+        /// Aplica daño al componente. La armadura absorbe parte del daño.
+        /// </summary>
+        public void TakeDamage(float amount)
         {
-            if (_isRegisteredInHealthSystem && _healthSystem != null)
-            {
-                _healthSystem.UnregisterDamageable(this);
-                _isRegisteredInHealthSystem = false;
-            }
-        }
+            if (!_isAlive || amount <= 0f || IsInvulnerable) return;
 
-        /// <inheritdoc />
-        public void TakeDamage(DamageInfo damage)
-        {
-            if (!_isAlive || IsInvulnerable || damage.Amount <= 0f)
+            // Aplicar absorción de armadura
+            if (HasArmor)
             {
-                return;
+                float absorbed = amount * _armorAbsorption;
+                float armorUsed = Mathf.Min(_currentArmor, absorbed);
+                _currentArmor -= armorUsed;
+                amount -= armorUsed;
+
+                OnArmorChanged?.Invoke(_currentArmor);
             }
 
-            DamageInfo finalDamage = ApplyDamageCurve(damage);
-            finalDamage.Target = gameObject;
+            // Aplicar daño restante a la salud
+            _currentHealth = Mathf.Max(0f, _currentHealth - amount);
+            _regenTimer = _regenDelay;
 
-            float previousArmor = CurrentArmor;
-            if (_armor != null && _armor.HasArmor)
+            // Invulnerabilidad temporal
+            if (_damageInvulnerabilityTime > 0f)
             {
-                _armor.TakeDamage(ref finalDamage);
-                if (!Mathf.Approximately(previousArmor, CurrentArmor))
-                {
-                    OnArmorChanged?.Invoke(CurrentArmor);
-                    HealthEvents.RaiseArmorChanged(gameObject, CurrentArmor, MaxArmor);
-                }
+                _invulnerabilityTimer = _damageInvulnerabilityTime;
             }
 
-            finalDamage.Amount = Mathf.Max(0f, finalDamage.Amount);
-            if (finalDamage.Amount <= 0f)
-            {
-                return;
-            }
-
-            _currentHealth = Mathf.Clamp(_currentHealth - finalDamage.Amount, 0f, MaxHealth);
-            _nextRegenAllowedTime = Time.time + GetRegenDelay();
-
-            if (_damageInvulnerabilityDuration > 0f)
-            {
-                SetTemporaryInvulnerability(_damageInvulnerabilityDuration);
-            }
-
-            OnDamage?.Invoke(finalDamage);
-            HealthEvents.RaiseDamage(gameObject, finalDamage);
+            OnDamageTaken?.Invoke(amount);
 
             if (_currentHealth <= 0f)
             {
-                Kill();
+                Die();
             }
-        }
-
-        /// <inheritdoc />
-        public void Heal(float amount)
-        {
-            if (!_isAlive || amount <= 0f)
-            {
-                return;
-            }
-
-            float previousHealth = _currentHealth;
-            _currentHealth = Mathf.Clamp(_currentHealth + amount, 0f, MaxHealth);
-
-            float healedAmount = _currentHealth - previousHealth;
-            if (healedAmount > 0f)
-            {
-                OnHeal?.Invoke(healedAmount);
-                HealthEvents.RaiseHeal(gameObject, healedAmount);
-            }
-        }
-
-        /// <inheritdoc />
-        public void AddArmor(float amount)
-        {
-            if (_armor == null || amount <= 0f)
-            {
-                return;
-            }
-
-            float previousArmor = CurrentArmor;
-            _armor.AddArmor(amount);
-
-            if (!Mathf.Approximately(previousArmor, CurrentArmor))
-            {
-                OnArmorChanged?.Invoke(CurrentArmor);
-                HealthEvents.RaiseArmorChanged(gameObject, CurrentArmor, MaxArmor);
-            }
-        }
-
-        /// <inheritdoc />
-        public void Kill()
-        {
-            if (!_isAlive)
-            {
-                return;
-            }
-
-            _currentHealth = 0f;
-            _isAlive = false;
-            OnDeath?.Invoke(this);
-            HealthEvents.RaiseDeath(gameObject);
         }
 
         /// <summary>
-        /// Enables temporary invulnerability for the given duration.
+        /// Aplica daño con información extendida (para futura escalabilidad).
         /// </summary>
-        /// <param name="duration">Duration in seconds.</param>
-        public void SetTemporaryInvulnerability(float duration)
+        public void TakeDamage(float amount, DamageType type, GameObject source = null)
         {
-            if (duration <= 0f)
-            {
-                return;
-            }
-
-            _temporaryInvulnerabilityTimer = Mathf.Max(_temporaryInvulnerabilityTimer, duration);
+            // Por ahora igual que TakeDamage simple
+            // Escalar: añadir multiplicadores por tipo de daño
+            TakeDamage(amount);
         }
 
-        private void ResetHealthState()
+        /// <summary>
+        /// Restaura salud.
+        /// </summary>
+        public void Heal(float amount)
         {
-            _currentHealth = MaxHealth;
-            _isAlive = _currentHealth > 0f;
-            _temporaryInvulnerabilityTimer = 0f;
-            _nextRegenAllowedTime = Time.time + GetRegenDelay();
-        }
+            if (!_isAlive || amount <= 0f) return;
 
-        private void TryRegisterInHealthSystem()
-        {
-            if (_isRegisteredInHealthSystem)
+            float previousHealth = _currentHealth;
+            _currentHealth = Mathf.Min(_maxHealth, _currentHealth + amount);
+            float healed = _currentHealth - previousHealth;
+
+            if (healed > 0f)
             {
-                return;
-            }
-
-            if (_healthSystem == null)
-            {
-                _healthSystem = DIContainer.Instance.Resolve<IHealthSystem>();
-            }
-
-            if (_healthSystem == null)
-            {
-                return;
-            }
-
-            _healthSystem.RegisterDamageable(this);
-            _isRegisteredInHealthSystem = true;
-        }
-
-        private void UpdateTemporaryInvulnerability(float deltaTime)
-        {
-            if (_temporaryInvulnerabilityTimer <= 0f)
-            {
-                return;
-            }
-
-            _temporaryInvulnerabilityTimer -= deltaTime;
-            if (_temporaryInvulnerabilityTimer < 0f)
-            {
-                _temporaryInvulnerabilityTimer = 0f;
+                OnHealed?.Invoke(healed);
             }
         }
 
-        private void TryRegenerateHealth(float deltaTime)
+        /// <summary>
+        /// Añade armadura.
+        /// </summary>
+        public void AddArmor(float amount)
         {
-            if (_healthData == null || !_healthData.canRegen || !_isAlive)
-            {
-                return;
-            }
+            if (amount <= 0f) return;
 
-            if (_currentHealth >= MaxHealth || Time.time < _nextRegenAllowedTime)
-            {
-                return;
-            }
-
-            float regenRate = Mathf.Max(0f, _healthData.healthRegenRate);
-            if (regenRate <= 0f)
-            {
-                return;
-            }
-
-            Heal(regenRate * deltaTime);
+            _currentArmor = Mathf.Min(_maxArmor, _currentArmor + amount);
+            OnArmorChanged?.Invoke(_currentArmor);
         }
 
-        private DamageInfo ApplyDamageCurve(DamageInfo damage)
+        /// <summary>
+        /// Mata al personaje.
+        /// </summary>
+        public void Die()
         {
-            if (_healthData == null || _healthData.damageCurve == null || _healthData.damageCurve.length == 0)
+            if (!_isAlive) return;
+
+            _isAlive = false;
+            _currentHealth = 0f;
+            OnDeath?.Invoke();
+        }
+
+        /// <summary>
+        /// Revive al personaje con la salud especificada.
+        /// </summary>
+        public void Revive(float healthPercent = 1f)
+        {
+            if (_isAlive) return;
+
+            _isAlive = true;
+            _currentHealth = _maxHealth * Mathf.Clamp01(healthPercent);
+            _regenTimer = 0f;
+            OnRevived?.Invoke();
+        }
+
+        /// <summary>
+        /// Restablece la salud al máximo.
+        /// </summary>
+        public void ResetHealth()
+        {
+            _currentHealth = _maxHealth;
+            _currentArmor = _initialArmor;
+            _isAlive = true;
+            _regenTimer = 0f;
+            _invulnerabilityTimer = 0f;
+        }
+
+        /// <summary>
+        /// Establece invulnerabilidad temporal.
+        /// </summary>
+        public void SetInvulnerable(float duration)
+        {
+            _invulnerabilityTimer = Mathf.Max(_invulnerabilityTimer, duration);
+        }
+
+        #endregion
+
+        #region Private Methods
+
+        private void UpdateInvulnerability(float deltaTime)
+        {
+            if (_invulnerabilityTimer > 0f)
             {
-                return damage;
+                _invulnerabilityTimer -= deltaTime;
             }
-
-            int maxIndex = Enum.GetValues(typeof(DamageType)).Length - 1;
-            float normalizedType = maxIndex > 0 ? Mathf.Clamp01((float)damage.Type / maxIndex) : 0f;
-            float multiplier = _healthData.damageCurve.Evaluate(normalizedType);
-
-            DamageInfo modifiedDamage = damage;
-            modifiedDamage.Amount = Mathf.Max(0f, damage.Amount * multiplier);
-            return modifiedDamage;
         }
 
-        private float GetRegenDelay()
+        private void TryRegenerate(float deltaTime)
         {
-            return _healthData != null ? Mathf.Max(0f, _healthData.regenDelay) : 0f;
+            if (!_canRegenerate || !_isAlive || _regenRate <= 0f) return;
+            if (_currentHealth >= _maxHealth) return;
+
+            _regenTimer -= deltaTime;
+            if (_regenTimer <= 0f)
+            {
+                Heal(_regenRate * deltaTime);
+            }
         }
+
+        #endregion
+    }
+
+    /// <summary>
+    /// Tipos de daño básicos. Escalar según necesidades.
+    /// </summary>
+    public enum DamageType
+    {
+        General,
+        Bullet,
+        Melee,
+        Explosion,
+        Fall,
+        Fire,
+        Drowning,
+        Vehicle
     }
 }

@@ -1303,6 +1303,7 @@ GameObject:
   - component: {fileID: 866316594}
   - component: {fileID: 866316595}
   - component: {fileID: 866316596}
+  - component: {fileID: 866316597}
   m_Layer: 0
   m_Name: Player_
   m_TagString: Untagged
@@ -1417,9 +1418,63 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: cc57d28fa2f6780449d18647f3416156, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GTAFramework.Health.Components.HealthComponent
-  _healthData: {fileID: 0}
-  _damageInvulnerabilityDuration: 0
-  _startInvulnerable: 0
+  _maxHealth: 100
+  _startWithMaxHealth: 1
+  _maxArmor: 100
+  _armorAbsorption: 0.75
+  _initialArmor: 50
+  _canRegenerate: 0
+  _regenRate: 5
+  _regenDelay: 3
+  _damageInvulnerabilityTime: 0.8
+--- !u!114 &866316597
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 866316590}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 00e3338b3fff9d54cb5a3ceaf3c84165, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HealthTest
+  _damageAction:
+    m_Name: Damage
+    m_Type: 0
+    m_ExpectedControlType: 
+    m_Id: 5f7379ee-5bd6-4cf3-9c3b-ff8bbd493c3f
+    m_Processors: 
+    m_Interactions: 
+    m_SingletonActionBindings:
+    - m_Name: 
+      m_Id: 72025241-6c96-4b53-84c8-c531ceca52c6
+      m_Path: <Keyboard>/k
+      m_Interactions: 
+      m_Processors: 
+      m_Groups: 
+      m_Action: Damage
+      m_Flags: 0
+    m_Flags: 0
+  _healAction:
+    m_Name: Heal
+    m_Type: 0
+    m_ExpectedControlType: 
+    m_Id: 82ca3861-88f2-4ed1-9a1c-9a41c4853504
+    m_Processors: 
+    m_Interactions: 
+    m_SingletonActionBindings:
+    - m_Name: 
+      m_Id: 4cec3d69-06dd-4043-b7ac-13737367c01d
+      m_Path: <Keyboard>/j
+      m_Interactions: 
+      m_Processors: 
+      m_Groups: 
+      m_Action: Heal
+      m_Flags: 0
+    m_Flags: 0
+  _damageAmount: 25
+  _healAmount: 30
 --- !u!1 &895399744
 GameObject:
   m_ObjectHideFlags: 0
@@ -1706,69 +1761,6 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 954c09a7270ddad4cbbf2c1c6cc2953b, type: 3}
---- !u!1 &1109558879
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1109558881}
-  - component: {fileID: 1109558880}
-  m_Layer: 0
-  m_Name: GameObject
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!114 &1109558880
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1109558879}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 37edfcd071b118e4fa2148aed4fe0d02, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::TestDamageDealer
-  damageAmount: 25
-  damageType: 0
-  damageAction:
-    m_Name: Damage
-    m_Type: 1
-    m_ExpectedControlType: Button
-    m_Id: 7dc29def-aa4a-4c5e-9a24-86cac8bc9bf4
-    m_Processors: 
-    m_Interactions: 
-    m_SingletonActionBindings:
-    - m_Name: 
-      m_Id: 3498c78f-5e66-4258-85ee-9622375c806a
-      m_Path: <Keyboard>/o
-      m_Interactions: 
-      m_Processors: 
-      m_Groups: 
-      m_Action: Damage
-      m_Flags: 0
-    m_Flags: 0
---- !u!4 &1109558881
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1109558879}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 4.3, y: 0.94482, z: -8.7}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1217696770
 GameObject:
   m_ObjectHideFlags: 0
@@ -5009,4 +5001,3 @@ SceneRoots:
   - {fileID: 71241742}
   - {fileID: 5162717245626561868}
   - {fileID: 3934814214373601631}
-  - {fileID: 1109558881}
