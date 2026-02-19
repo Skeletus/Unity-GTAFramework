@@ -37,7 +37,7 @@ namespace GTAFramework.Player.Components.States
 
             // Check if stopped moving
             float horizontalSpeed = new Vector3(_controller.Velocity.x, 0, _controller.Velocity.z).magnitude;
-            if (horizontalSpeed < 0.1f)
+            if (horizontalSpeed < 0.5f)
             {
                 return _controller.IdleState;
             }

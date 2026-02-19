@@ -151,6 +151,11 @@ namespace GTAFramework.Player.Components
         private void Update()
         {
             _crouchSystem?.UpdateCollider();
+            
+        }
+
+        private void LateUpdate()
+        {
             UpdateStateMachine();
         }
 

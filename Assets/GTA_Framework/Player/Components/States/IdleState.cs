@@ -37,11 +37,13 @@ namespace GTAFramework.Player.Components.States
                 return _controller.CrouchingState;
             }
 
+            // Determine if walking or running based on speed
+            float horizontalSpeed = new Vector3(_controller.Velocity.x, 0, _controller.Velocity.z).magnitude;
+
             // Check if moving
-            if (_controller.Velocity.magnitude > 0.1f)
+            if (horizontalSpeed > 0.5f)
             {
-                // Determine if walking or running based on speed
-                float horizontalSpeed = new Vector3(_controller.Velocity.x, 0, _controller.Velocity.z).magnitude;
+                
 
                 if (_controller.IsSprinting && horizontalSpeed > _controller.MovementData.runSpeed + 0.5f)
                 {

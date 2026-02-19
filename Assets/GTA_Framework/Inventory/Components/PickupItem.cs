@@ -45,17 +45,50 @@ namespace GTAFramework.Inventory.Components
 
         private void OnTriggerEnter(Collider other)
         {
-            if (_isPickedUp || _itemData == null) return;
-            if (!other.CompareTag(_receiverTag)) return;
+            Debug.Log($"[PickupItem] Trigger detectado: {other.name} (Tag: {other.tag})");
+
+            if (_isPickedUp)
+            {
+                Debug.Log("[PickupItem] Ya fue recogido, ignorando.");
+                return;
+            }
+
+            if (_itemData == null)
+            {
+                Debug.LogError("[PickupItem] No hay ItemData asignado!");
+                return;
+            }
+
+            if (!other.CompareTag(_receiverTag))
+            {
+                Debug.Log($"[PickupItem] Tag incorrecto. Esperado: '{_receiverTag}', Recibido: '{other.tag}'");
+                return;
+            }
+
+            Debug.Log($"[PickupItem] Tag correcto '{_receiverTag}' detectado.");
 
             // Buscar IPickupReceiver en el objeto o padres
             var receiver = other.GetComponentInParent<IPickupReceiver>();
-            if (receiver == null) return;
+            if (receiver == null)
+            {
+                Debug.LogError($"[PickupItem] No se encontró IPickupReceiver en {other.name} ni en sus padres.");
+                return;
+            }
+
+            Debug.Log($"[PickupItem] IPickupReceiver encontrado: {receiver.GetType().Name}");
 
             // Intentar entregar el item
-            if (receiver.ReceiveItem(_itemData, _quantity))
+            bool received = receiver.ReceiveItem(_itemData, _quantity);
+            Debug.Log($"[PickupItem] ReceiveItem resultado: {received}");
+
+            if (received)
             {
+                Debug.Log($"[PickupItem] Item '{_itemData.itemName}' recogido exitosamente!");
                 OnPickedUp();
+            }
+            else
+            {
+                Debug.LogWarning($"[PickupItem] No se pudo recibir el item '{_itemData.itemName}'. ¿Inventario lleno?");
             }
         }
 
