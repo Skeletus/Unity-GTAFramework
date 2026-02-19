@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a788228e18ba7e141afa0b907d8fd7fe, type: 3}
+  m_Name: Rifle_AK47
+  m_EditorClassIdentifier: Assembly-CSharp::GTAFramework.Weapons.Data.WeaponData
+  weaponName: Rifle_AK47
+  weaponType: {fileID: 11400000, guid: ebdcb436db5e08140af60a19b87d3ed9, type: 2}
+  icon: {fileID: 0}
+  damage: 30
+  fireRate: 0.1
+  magazineSize: 12
+  reloadTime: 2
+  range: 50
+  weaponPrefab: {fileID: 6178626018443916350, guid: 8a3f6719b5f2e2a459f1e7ae048d6855, type: 3}
+  fireSound: {fileID: 0}
+  reloadSound: {fileID: 0}

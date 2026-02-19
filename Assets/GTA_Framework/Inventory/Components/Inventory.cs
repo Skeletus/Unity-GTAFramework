@@ -1,6 +1,8 @@
 using GTAFramework.Health.Components;
 using GTAFramework.Inventory.Data;
 using GTAFramework.Inventory.Interfaces;
+using GTAFramework.Weapons.Components;
+using GTAFramework.Weapons.Data;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -22,6 +24,9 @@ namespace GTAFramework.Inventory.Components
         // Almacenamiento de items: ItemData -> cantidad
         private readonly Dictionary<ItemData, int> _items = new();
 
+        // Inventario de armas
+        private WeaponInventory _weaponInventory;
+
         // Eventos para UI, sonidos, etc.
         public event System.Action<ItemData, int> OnItemAdded;
         public event System.Action<ItemData, int> OnItemRemoved;
@@ -29,12 +34,18 @@ namespace GTAFramework.Inventory.Components
         // Properties
         public int SlotCount => _items.Count;
         public int MaxSlots => _maxSlots;
+        public WeaponInventory Weapons => _weaponInventory;
+
 
         private void Awake()
         {
             // Auto-referencia si no está asignada
             if (_health == null)
                 _health = GetComponent<HealthComponent>();
+
+            _weaponInventory = GetComponent<WeaponInventory>();
+            if (_weaponInventory == null)
+                _weaponInventory = gameObject.AddComponent<WeaponInventory>();
         }
 
         #region IPickupReceiver Implementation
@@ -49,6 +60,14 @@ namespace GTAFramework.Inventory.Components
             // Items de efecto inmediato siempre se pueden recibir
             if (item.type == ItemType.Health || item.type == ItemType.Armor)
                 return true;
+
+            // Armas - verificar con WeaponInventory
+            if (item.type == ItemType.Weapon)
+            {
+                // Aquí necesitarías convertir ItemData a WeaponData
+                // Por ahora retornamos true para armas
+                return true;
+            }
 
             // Si ya existe, puede stackear
             if (_items.ContainsKey(item))
@@ -103,6 +122,42 @@ namespace GTAFramework.Inventory.Components
                     _health.AddArmor(item.effectValue);
                     break;
             }
+        }
+
+        #endregion
+
+        #region Weapon API
+
+        /// <summary>
+        /// Añade un arma al inventario de armas
+        /// </summary>
+        public bool AddWeapon(WeaponData weapon)
+        {
+            return _weaponInventory?.AddWeapon(weapon) ?? false;
+        }
+
+        /// <summary>
+        /// ¿Tiene esta arma?
+        /// </summary>
+        public bool HasWeapon(WeaponData weapon)
+        {
+            return _weaponInventory?.HasWeapon(weapon) ?? false;
+        }
+
+        /// <summary>
+        /// Remueve un arma
+        /// </summary>
+        public bool RemoveWeapon(WeaponData weapon)
+        {
+            return _weaponInventory?.RemoveWeapon(weapon) ?? false;
+        }
+
+        /// <summary>
+        /// Obtiene el arma activa
+        /// </summary>
+        public WeaponData GetActiveWeapon()
+        {
+            return _weaponInventory?.ActiveWeapon;
         }
 
         #endregion

@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a788228e18ba7e141afa0b907d8fd7fe, type: 3}
+  m_Name: Pistol_9mm
+  m_EditorClassIdentifier: Assembly-CSharp::GTAFramework.Weapons.Data.WeaponData
+  weaponName: 9mm
+  weaponType: {fileID: 11400000, guid: 832e18afc5234e54daa9b2bf547f038c, type: 2}
+  icon: {fileID: 0}
+  damage: 15
+  fireRate: 0.3
+  magazineSize: 12
+  reloadTime: 2
+  range: 50
+  weaponPrefab: {fileID: 7978929506083241137, guid: 749bdf3c2d563f04197066458db40371, type: 3}
+  fireSound: {fileID: 0}
+  reloadSound: {fileID: 0}
