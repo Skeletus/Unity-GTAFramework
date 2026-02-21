@@ -1408,6 +1408,8 @@ GameObject:
   - component: {fileID: 866316598}
   - component: {fileID: 866316600}
   - component: {fileID: 866316599}
+  - component: {fileID: 866316602}
+  - component: {fileID: 866316601}
   m_Layer: 0
   m_Name: Player_
   m_TagString: Player
@@ -1571,6 +1573,38 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GTAFramework.Weapons.Components.WeaponInteractor
   _maxPickupDistance: 2.5
+--- !u!114 &866316601
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 866316590}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8779a3b844387524984c2d6f8b835372, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::GTAFramework.Weapons.Components.WeaponShooter
+  _hitMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  _triggerInteraction: 1
+  _fireOriginOverride: {fileID: 0}
+  _drawDebugRay: 0
+  _debugRayDuration: 0.05
+--- !u!114 &866316602
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 866316590}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 738fb54f9ed0c2843bd95c958f21015c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::GTAFramework.Weapons.Components.WeaponAimer
+  _thirdPersonCamera: {fileID: 330585548}
 --- !u!1 &895399744
 GameObject:
   m_ObjectHideFlags: 0

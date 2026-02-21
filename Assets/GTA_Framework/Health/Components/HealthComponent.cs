@@ -1,14 +1,15 @@
-using System;
+Ôªøusing System;
 using UnityEngine;
+using GTAFramework.Health.Interfaces;
 
 namespace GTAFramework.Health.Components
 {
     /// <summary>
-    /// Componente de salud minimalista que maneja vida, armadura y daÒo.
+    /// Componente de salud minimalista que maneja vida, armadura y da√±o.
     /// Keep it simple, escalar cuando sea necesario.
     /// </summary>
     [DisallowMultipleComponent]
-    public class HealthComponent : MonoBehaviour
+    public class HealthComponent : MonoBehaviour, IDamageable
     {
         [Header("Health Settings")]
         [SerializeField, Min(1f)] private float _maxHealth = 100f;
@@ -71,13 +72,13 @@ namespace GTAFramework.Health.Components
         #region Public API
 
         /// <summary>
-        /// Aplica daÒo al componente. La armadura absorbe parte del daÒo.
+        /// Aplica da√±o al componente. La armadura absorbe parte del da√±o.
         /// </summary>
         public void TakeDamage(float amount)
         {
             if (!_isAlive || amount <= 0f || IsInvulnerable) return;
 
-            // Aplicar absorciÛn de armadura
+            // Aplicar absorci√≥n de armadura
             if (HasArmor)
             {
                 float absorbed = amount * _armorAbsorption;
@@ -88,7 +89,7 @@ namespace GTAFramework.Health.Components
                 OnArmorChanged?.Invoke(_currentArmor);
             }
 
-            // Aplicar daÒo restante a la salud
+            // Aplicar da√±o restante a la salud
             _currentHealth = Mathf.Max(0f, _currentHealth - amount);
             _regenTimer = _regenDelay;
 
@@ -107,13 +108,21 @@ namespace GTAFramework.Health.Components
         }
 
         /// <summary>
-        /// Aplica daÒo con informaciÛn extendida (para futura escalabilidad).
+        /// Aplica da√±o con informaci√≥n extendida (para futura escalabilidad).
         /// </summary>
         public void TakeDamage(float amount, DamageType type, GameObject source = null)
         {
             // Por ahora igual que TakeDamage simple
-            // Escalar: aÒadir multiplicadores por tipo de daÒo
+            // Escalar: a√±adir multiplicadores por tipo de da√±o
             TakeDamage(amount);
+        }
+
+        /// <summary>
+        /// Implementaci√≥n de IDamageable.
+        /// </summary>
+        public void ApplyDamage(float amount, DamageType type, GameObject source = null)
+        {
+            TakeDamage(amount, type, source);
         }
 
         /// <summary>
@@ -134,7 +143,7 @@ namespace GTAFramework.Health.Components
         }
 
         /// <summary>
-        /// AÒade armadura.
+        /// A√±ade armadura.
         /// </summary>
         public void AddArmor(float amount)
         {
@@ -170,7 +179,7 @@ namespace GTAFramework.Health.Components
         }
 
         /// <summary>
-        /// Restablece la salud al m·ximo.
+        /// Restablece la salud al m√°ximo.
         /// </summary>
         public void ResetHealth()
         {
@@ -217,7 +226,7 @@ namespace GTAFramework.Health.Components
     }
 
     /// <summary>
-    /// Tipos de daÒo b·sicos. Escalar seg˙n necesidades.
+    /// Tipos de da√±o b√°sicos. Escalar seg√∫n necesidades.
     /// </summary>
     public enum DamageType
     {

@@ -17,6 +17,12 @@ namespace GTAFramework.Core.Services
         public bool IsInteractPressed { get; set; }
         public bool IsWeaponPrevPressed { get; private set; }
         public bool IsWeaponNextPressed { get; private set; }
+        public bool IsAimPressed { get; private set; }
+        public bool IsShootPressed { get; private set; }
+
+        // Estado derivado (sistemas pueden setearlo)
+        public bool IsAiming { get; set; }
+        public float MovementSpeedMultiplier { get; set; } = 1f;
 
         public void Initialize()
         {
@@ -49,6 +55,12 @@ namespace GTAFramework.Core.Services
 
             _inputActions.Player.WeaponNext.performed += OnWeaponNext;
             _inputActions.Player.WeaponNext.canceled += OnWeaponNext;
+
+            _inputActions.Player.Aim.performed += OnAim;
+            _inputActions.Player.Aim.canceled += OnAim;
+
+            _inputActions.Player.Shoot.performed += OnShoot;
+            _inputActions.Player.Shoot.canceled += OnShoot;
 
             _inputActions.Enable();
 
@@ -110,6 +122,16 @@ namespace GTAFramework.Core.Services
         private void OnWeaponNext(InputAction.CallbackContext context)
         {
             IsWeaponNextPressed = context.ReadValueAsButton();
+        }
+
+        private void OnAim(InputAction.CallbackContext context)
+        {
+            IsAimPressed = context.ReadValueAsButton();
+        }
+
+        private void OnShoot(InputAction.CallbackContext context)
+        {
+            IsShootPressed = context.ReadValueAsButton();
         }
 
         public void EnableInput()

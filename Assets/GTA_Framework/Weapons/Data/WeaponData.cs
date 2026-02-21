@@ -12,8 +12,24 @@ namespace GTAFramework.Weapons.Data
         [Header("Visuals")]
         public GameObject weaponPrefab;
 
+        [Header("Firearm Settings")]
+        [Tooltip("Si esta activo, esta arma puede apuntar y disparar.")]
+        public bool isFirearm = true;
+
+        [Tooltip("Dano por disparo (hitscan).")]
+        [Min(0f)] public float damage = 20f;
+
+        [Tooltip("Disparos por segundo.")]
+        [Min(0.1f)] public float fireRate = 6f;
+
+        [Tooltip("Rango maximo del raycast.")]
+        [Min(1f)] public float range = 60f;
+
+        [Tooltip("Multiplicador de velocidad al apuntar.")]
+        [Range(0.1f, 1f)] public float aimMoveSpeedMultiplier = 0.6f;
+
         [Header("Equip Pose (Local)")]
-        [Tooltip("Si está activado, se aplican estos valores al instanciar el arma en el weaponHolder.")]
+        [Tooltip("Si esta activado, se aplican estos valores al instanciar el arma en el weaponHolder.")]
         public bool useCustomPose = false;
         public Vector3 localPosition = Vector3.zero;
         public Vector3 localEulerAngles = Vector3.zero;

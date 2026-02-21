@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using GTAFramework.Player.Components;
 using GTAFramework.Core.Services;
 
@@ -56,21 +56,28 @@ namespace GTAFramework.Player.Commands
         private float GetTargetSpeed()
         {
             var data = _controller.MovementData;
+            bool isAiming = _input.IsAiming;
 
-            // Mantener side-effects como en el c�digo original
+            // Mantener side-effects como en el código original
             _controller.IsWalking = _input.IsWalkPressed;
-            _controller.IsSprinting = _input.IsSprintPressed;
+            _controller.IsSprinting = !isAiming && _input.IsSprintPressed;
 
             if (_controller.IsWalking)
-                return data.slowWalkingSpeed;
+                return ApplySpeedMultiplier(data.slowWalkingSpeed);
 
             if (_controller.IsCrouching)
-                return data.crouchSpeed;
+                return ApplySpeedMultiplier(data.crouchSpeed);
 
             if (_controller.IsSprinting)
-                return data.sprintSpeed;
+                return ApplySpeedMultiplier(data.sprintSpeed);
 
-            return data.runSpeed;
+            return ApplySpeedMultiplier(data.runSpeed);
+        }
+
+        private float ApplySpeedMultiplier(float baseSpeed)
+        {
+            float multiplier = Mathf.Clamp(_input.MovementSpeedMultiplier, 0.1f, 2f);
+            return baseSpeed * multiplier;
         }
 
         public void ResetVelocity()
