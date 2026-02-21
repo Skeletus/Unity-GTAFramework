@@ -1,153 +1,173 @@
-using GTAFramework.Weapons.Data;
-using System.Collections.Generic;
+ï»¿using System.Collections.Generic;
 using UnityEngine;
+using GTAFramework.Weapons.Data;
 
 namespace GTAFramework.Weapons.Components
 {
     /// <summary>
-    /// Gestiona el inventario de armas del jugador.
-    /// Múltiples slots, cada uno con un tipo de arma específico.
+    /// Inventario simple de armas:
+    /// - 1 arma por tipo (WeaponType)
+    /// - Al recoger, reemplaza si ya existe ese tipo
+    /// - Equipa automÃ¡ticamente el arma recogida
     /// </summary>
+    [DisallowMultipleComponent]
     public class WeaponInventory : MonoBehaviour
     {
-        [Header("Weapon Slots Configuration")]
-        [SerializeField] private List<WeaponType> _slotTypes = new();
+        [Header("References")]
+        [SerializeField] private Transform _weaponHolder;
 
-        // Storage
-        private readonly Dictionary<WeaponType, WeaponSlot> _weaponSlots = new();
+        private readonly Dictionary<WeaponType, WeaponData> _weaponsByType = new();
+        private readonly List<WeaponType> _weaponOrder = new();
 
-        // Estado
-        private WeaponSlot _currentSlot;
+        private int _currentIndex = -1;
+        private GameObject _currentWeaponInstance;
 
-        // Eventos
-        public event System.Action<WeaponData> OnActiveWeaponChanged;
-        public event System.Action<WeaponSlot> OnSlotChanged;
-
-        // Properties
-        public WeaponData ActiveWeapon => _currentSlot?.ActiveWeapon;
-        public WeaponSlot CurrentSlot => _currentSlot;
-        public int SlotCount => _weaponSlots.Count;
-
-        private void Awake()
+        public WeaponData CurrentWeapon
         {
-            InitializeSlots();
-        }
-
-        private void InitializeSlots()
-        {
-            _weaponSlots.Clear();
-
-            foreach (var type in _slotTypes)
+            get
             {
-                if (type != null && !_weaponSlots.ContainsKey(type))
-                {
-                    var slot = new WeaponSlot(type);
-                    slot.OnActiveWeaponChanged += OnSlotActiveWeaponChanged;
-                    _weaponSlots[type] = slot;
-                }
+                if (_currentIndex < 0 || _currentIndex >= _weaponOrder.Count)
+                    return null;
+
+                return _weaponsByType[_weaponOrder[_currentIndex]];
             }
         }
 
-        private void OnSlotActiveWeaponChanged(WeaponData weapon)
+        public IReadOnlyList<WeaponType> WeaponOrder => _weaponOrder;
+        public bool HasWeapons => _weaponOrder.Count > 0;
+
+        /// <summary>
+        /// Retorna true si ya hay un arma de ese tipo en el inventario.
+        /// </summary>
+        public bool HasWeaponType(WeaponType type)
         {
-            OnActiveWeaponChanged?.Invoke(weapon);
+            return _weaponsByType.ContainsKey(type);
         }
 
         /// <summary>
-        /// Obtiene un slot por su tipo
+        /// Agrega o reemplaza un arma por tipo y la equipa inmediatamente.
         /// </summary>
-        public WeaponSlot GetSlot(WeaponType type)
+        public bool TryAddOrReplace(WeaponData weaponData)
         {
-            return _weaponSlots.TryGetValue(type, out var slot) ? slot : null;
-        }
+            if (weaponData == null)
+                return false;
 
-        /// <summary>
-        /// Obtiene todos los slots
-        /// </summary>
-        public IReadOnlyDictionary<WeaponType, WeaponSlot> GetAllSlots()
-        {
-            return _weaponSlots;
-        }
-
-        /// <summary>
-        /// Añade un arma al inventario
-        /// </summary>
-        public bool AddWeapon(WeaponData weapon)
-        {
-            if (weapon == null || weapon.weaponType == null) return false;
-
-            var slot = GetSlot(weapon.weaponType);
-            if (slot == null)
+            if (_weaponHolder == null)
             {
-                // Crear slot dinámicamente si no existe
-                slot = new WeaponSlot(weapon.weaponType);
-                slot.OnActiveWeaponChanged += OnSlotActiveWeaponChanged;
-                _weaponSlots[weapon.weaponType] = slot;
+                Debug.LogError("[WeaponInventory] WeaponHolder no asignado. No se puede equipar el arma.");
+                return false;
             }
 
-            if (!slot.AddWeapon(weapon)) return false;
+            if (weaponData.weaponPrefab == null)
+            {
+                Debug.LogWarning($"[WeaponInventory] WeaponData '{weaponData.name}' no tiene prefab asignado.");
+                return false;
+            }
 
-            OnSlotChanged?.Invoke(slot);
+            bool existed = _weaponsByType.ContainsKey(weaponData.type);
+            _weaponsByType[weaponData.type] = weaponData;
+
+            if (!existed)
+                _weaponOrder.Add(weaponData.type);
+
+            int index = _weaponOrder.IndexOf(weaponData.type);
+            EquipByIndex(index);
             return true;
         }
 
         /// <summary>
-        /// ¿Tiene esta arma?
+        /// Equipa el arma siguiente de forma cÃ­clica.
         /// </summary>
-        public bool HasWeapon(WeaponData weapon)
+        public void EquipNext()
         {
-            var slot = GetSlot(weapon.weaponType);
-            return slot?.HasWeapon(weapon) ?? false;
+            if (_weaponOrder.Count == 0)
+                return;
+
+            if (_currentIndex < 0)
+            {
+                EquipByIndex(0);
+                return;
+            }
+
+            int next = (_currentIndex + 1) % _weaponOrder.Count;
+            EquipByIndex(next);
         }
 
         /// <summary>
-        /// Remueve un arma
+        /// Equipa el arma anterior de forma cÃ­clica.
         /// </summary>
-        public bool RemoveWeapon(WeaponData weapon)
+        public void EquipPrevious()
         {
-            var slot = GetSlot(weapon.weaponType);
-            if (slot == null) return false;
+            if (_weaponOrder.Count == 0)
+                return;
 
-            if (!slot.RemoveWeapon(weapon)) return false;
+            if (_currentIndex < 0)
+            {
+                EquipByIndex(0);
+                return;
+            }
 
-            OnSlotChanged?.Invoke(slot);
+            int prev = (_currentIndex - 1 + _weaponOrder.Count) % _weaponOrder.Count;
+            EquipByIndex(prev);
+        }
+
+        /// <summary>
+        /// Equipa un arma especÃ­fica por tipo (si existe).
+        /// </summary>
+        public bool EquipByType(WeaponType type)
+        {
+            if (!_weaponsByType.ContainsKey(type))
+                return false;
+
+            int index = _weaponOrder.IndexOf(type);
+            if (index < 0)
+                return false;
+
+            EquipByIndex(index);
             return true;
         }
 
-        /// <summary>
-        /// Establece el slot activo por tipo
-        /// </summary>
-        public bool SetActiveSlot(WeaponType type)
+        private void EquipByIndex(int index)
         {
-            var slot = GetSlot(type);
-            if (slot == null) return false;
+            if (_weaponOrder.Count == 0)
+                return;
 
-            _currentSlot = slot;
-            OnActiveWeaponChanged?.Invoke(slot.ActiveWeapon);
-            return true;
+            _currentIndex = Mathf.Clamp(index, 0, _weaponOrder.Count - 1);
+
+            WeaponType type = _weaponOrder[_currentIndex];
+            WeaponData data = _weaponsByType[type];
+
+            SpawnWeaponModel(data);
         }
 
-        /// <summary>
-        /// Cambia al siguiente slot
-        /// </summary>
-        public void CycleToNextSlot()
+        private void SpawnWeaponModel(WeaponData data)
         {
-            if (_weaponSlots.Count == 0) return;
+            if (data == null || data.weaponPrefab == null)
+                return;
 
-            var slots = new List<WeaponSlot>(_weaponSlots.Values);
-            int currentIndex = slots.IndexOf(_currentSlot);
-            int nextIndex = (currentIndex + 1) % slots.Count;
+            if (_currentWeaponInstance != null)
+                Destroy(_currentWeaponInstance);
 
-            _currentSlot = slots[nextIndex];
-            OnActiveWeaponChanged?.Invoke(_currentSlot.ActiveWeapon);
+            _currentWeaponInstance = Instantiate(data.weaponPrefab, _weaponHolder);
+
+            if (data.useCustomPose)
+            {
+                _currentWeaponInstance.transform.localPosition = data.localPosition;
+                _currentWeaponInstance.transform.localRotation = Quaternion.Euler(data.localEulerAngles);
+                _currentWeaponInstance.transform.localScale = data.localScale;
+            }
+            else
+            {
+                _currentWeaponInstance.transform.localPosition = Vector3.zero;
+                _currentWeaponInstance.transform.localRotation = Quaternion.identity;
+                _currentWeaponInstance.transform.localScale = Vector3.one;
+            }
         }
 
-        /// <summary>
-        /// Cambia al arma siguiente en el slot actual
-        /// </summary>
-        public void CycleWeaponInCurrentSlot()
+        private void OnDestroy()
         {
-            _currentSlot?.CycleToNextWeapon();
+            if (_currentWeaponInstance != null)
+                Destroy(_currentWeaponInstance);
         }
     }
 }

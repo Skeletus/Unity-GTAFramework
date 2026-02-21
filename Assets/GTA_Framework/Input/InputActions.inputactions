@@ -68,6 +68,24 @@
                     "processors": "",
                     "interactions": "",
                     "initialStateCheck": false
+                },
+                {
+                    "name": "WeaponPrev",
+                    "type": "Button",
+                    "id": "1250ff54-a47d-4884-9438-fa8232162819",
+                    "expectedControlType": "",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                },
+                {
+                    "name": "WeaponNext",
+                    "type": "Button",
+                    "id": "2026036b-dc01-4343-8400-357b7e6bcdaf",
+                    "expectedControlType": "",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
                 }
             ],
             "bindings": [
@@ -184,11 +202,33 @@
                 {
                     "name": "",
                     "id": "9597d352-1095-4e72-80fe-32ba1a2f9a25",
-                    "path": "<Keyboard>/e",
+                    "path": "<Keyboard>/f",
                     "interactions": "",
                     "processors": "",
                     "groups": "",
                     "action": "UseVehicle",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "111bd00f-8aa9-4f06-9817-ae01b96b8039",
+                    "path": "<Keyboard>/q",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "WeaponPrev",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "385fa4af-3e54-4496-8480-aba115a44d7b",
+                    "path": "<Keyboard>/e",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "WeaponNext",
                     "isComposite": false,
                     "isPartOfComposite": false
                 }

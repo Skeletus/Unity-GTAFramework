@@ -15,6 +15,8 @@ namespace GTAFramework.Core.Services
         public bool IsJumpPressed { get; private set; }
         public bool IsCrouchPressed { get; private set; }
         public bool IsInteractPressed { get; set; }
+        public bool IsWeaponPrevPressed { get; private set; }
+        public bool IsWeaponNextPressed { get; private set; }
 
         public void Initialize()
         {
@@ -41,6 +43,12 @@ namespace GTAFramework.Core.Services
 
             _inputActions.Player.UseVehicle.performed += OnInteract;
             _inputActions.Player.UseVehicle.canceled += OnInteract;
+
+            _inputActions.Player.WeaponPrev.performed += OnWeaponPrev;
+            _inputActions.Player.WeaponPrev.canceled += OnWeaponPrev;
+
+            _inputActions.Player.WeaponNext.performed += OnWeaponNext;
+            _inputActions.Player.WeaponNext.canceled += OnWeaponNext;
 
             _inputActions.Enable();
 
@@ -91,10 +99,17 @@ namespace GTAFramework.Core.Services
 
         private void OnInteract(InputAction.CallbackContext context)
         {
-            if (context.performed)
-            {
-                IsInteractPressed = true;
-            }
+            IsInteractPressed = context.ReadValueAsButton();
+        }
+
+        private void OnWeaponPrev(InputAction.CallbackContext context)
+        {
+            IsWeaponPrevPressed = context.ReadValueAsButton();
+        }
+
+        private void OnWeaponNext(InputAction.CallbackContext context)
+        {
+            IsWeaponNextPressed = context.ReadValueAsButton();
         }
 
         public void EnableInput()

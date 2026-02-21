@@ -1,19 +1,17 @@
-using UnityEngine;
-
-namespace GTAFramework.Weapons.Data
+Ôªønamespace GTAFramework.Weapons.Data
 {
     /// <summary>
-    /// Define una categorÌa/tipo de arma (Pistolas, Escopetas, Rifles, etc.)
+    /// Categor√≠a del arma (solo 1 por tipo en inventario).
+    /// Ajusta/expande seg√∫n tus necesidades.
     /// </summary>
-    [CreateAssetMenu(fileName = "NewWeaponType", menuName = "GTA Framework/Weapon Type")]
-    public class WeaponType : ScriptableObject
+    public enum WeaponType
     {
-        [Header("Info")]
-        public string typeName = "Weapon Type";
-        public Sprite categoryIcon;
-
-        [Header("Settings")]
-        [Tooltip("M·ximo de armas que se pueden llevar de este tipo")]
-        public int maxWeaponsPerSlot = 3;
+        Melee,
+        Pistol,
+        SMG,
+        Shotgun,
+        Rifle,
+        Sniper,
+        Heavy
     }
 }

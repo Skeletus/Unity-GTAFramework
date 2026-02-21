@@ -10,16 +10,12 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: a788228e18ba7e141afa0b907d8fd7fe, type: 3}
-  m_Name: Pistol_DesertEagle
+  m_Name: Pistol_Data
   m_EditorClassIdentifier: Assembly-CSharp::GTAFramework.Weapons.Data.WeaponData
-  weaponName: DesertEagle
-  weaponType: {fileID: 11400000, guid: 832e18afc5234e54daa9b2bf547f038c, type: 2}
-  icon: {fileID: 0}
-  damage: 35
-  fireRate: 0.2
-  magazineSize: 12
-  reloadTime: 2
-  range: 50
-  weaponPrefab: {fileID: 5488736124520720049, guid: e6e6470c0fc37ba4c9fbb67e857c25d4, type: 3}
-  fireSound: {fileID: 0}
-  reloadSound: {fileID: 0}
+  weaponName: Pistol
+  type: 1
+  weaponPrefab: {fileID: 7964396917078906551, guid: bae197e6b2186f64e817836880d5c00f, type: 3}
+  useCustomPose: 0
+  localPosition: {x: 0, y: 0, z: 0}
+  localEulerAngles: {x: 0, y: 0, z: 0}
+  localScale: {x: 1, y: 1, z: 1}

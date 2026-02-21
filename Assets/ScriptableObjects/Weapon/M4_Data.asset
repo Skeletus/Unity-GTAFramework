@@ -10,16 +10,12 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: a788228e18ba7e141afa0b907d8fd7fe, type: 3}
-  m_Name: Pistol_9mm
+  m_Name: M4_Data
   m_EditorClassIdentifier: Assembly-CSharp::GTAFramework.Weapons.Data.WeaponData
-  weaponName: 9mm
-  weaponType: {fileID: 11400000, guid: 832e18afc5234e54daa9b2bf547f038c, type: 2}
-  icon: {fileID: 0}
-  damage: 15
-  fireRate: 0.3
-  magazineSize: 12
-  reloadTime: 2
-  range: 50
-  weaponPrefab: {fileID: 7978929506083241137, guid: 749bdf3c2d563f04197066458db40371, type: 3}
-  fireSound: {fileID: 0}
-  reloadSound: {fileID: 0}
+  weaponName: M4
+  type: 4
+  weaponPrefab: {fileID: 4820667405539803364, guid: 387c63795c1b05947a48754fb1238615, type: 3}
+  useCustomPose: 0
+  localPosition: {x: 0, y: 0, z: 0}
+  localEulerAngles: {x: 0, y: 0, z: 0}
+  localScale: {x: 1, y: 1, z: 1}

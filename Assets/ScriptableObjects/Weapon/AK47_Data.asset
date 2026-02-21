@@ -10,16 +10,12 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: a788228e18ba7e141afa0b907d8fd7fe, type: 3}
-  m_Name: Rifle_AK47
+  m_Name: AK47_Data
   m_EditorClassIdentifier: Assembly-CSharp::GTAFramework.Weapons.Data.WeaponData
-  weaponName: Rifle_AK47
-  weaponType: {fileID: 11400000, guid: ebdcb436db5e08140af60a19b87d3ed9, type: 2}
-  icon: {fileID: 0}
-  damage: 30
-  fireRate: 0.1
-  magazineSize: 12
-  reloadTime: 2
-  range: 50
-  weaponPrefab: {fileID: 6178626018443916350, guid: 8a3f6719b5f2e2a459f1e7ae048d6855, type: 3}
-  fireSound: {fileID: 0}
-  reloadSound: {fileID: 0}
+  weaponName: AK47
+  type: 4
+  weaponPrefab: {fileID: 1577196836532960040, guid: 2f3c1a5ed0b6155479e442a284fad10f, type: 3}
+  useCustomPose: 0
+  localPosition: {x: 0, y: 0, z: 0}
+  localEulerAngles: {x: 0, y: 0, z: 0}
+  localScale: {x: 1, y: 1, z: 1}

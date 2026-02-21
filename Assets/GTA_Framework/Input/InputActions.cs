@@ -154,6 +154,24 @@ public partial class @InputActions: IInputActionCollection2, IDisposable
                     ""processors"": """",
                     ""interactions"": """",
                     ""initialStateCheck"": false
+                },
+                {
+                    ""name"": ""WeaponPrev"",
+                    ""type"": ""Button"",
+                    ""id"": ""1250ff54-a47d-4884-9438-fa8232162819"",
+                    ""expectedControlType"": """",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": false
+                },
+                {
+                    ""name"": ""WeaponNext"",
+                    ""type"": ""Button"",
+                    ""id"": ""2026036b-dc01-4343-8400-357b7e6bcdaf"",
+                    ""expectedControlType"": """",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": false
                 }
             ],
             ""bindings"": [
@@ -270,11 +288,33 @@ public partial class @InputActions: IInputActionCollection2, IDisposable
                 {
                     ""name"": """",
                     ""id"": ""9597d352-1095-4e72-80fe-32ba1a2f9a25"",
-                    ""path"": ""<Keyboard>/e"",
+                    ""path"": ""<Keyboard>/f"",
                     ""interactions"": """",
                     ""processors"": """",
                     ""groups"": """",
                     ""action"": ""UseVehicle"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""111bd00f-8aa9-4f06-9817-ae01b96b8039"",
+                    ""path"": ""<Keyboard>/q"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""WeaponPrev"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""385fa4af-3e54-4496-8480-aba115a44d7b"",
+                    ""path"": ""<Keyboard>/e"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""WeaponNext"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
                 }
@@ -292,6 +332,8 @@ public partial class @InputActions: IInputActionCollection2, IDisposable
         m_Player_Crouch = m_Player.FindAction("Crouch", throwIfNotFound: true);
         m_Player_Walk = m_Player.FindAction("Walk", throwIfNotFound: true);
         m_Player_UseVehicle = m_Player.FindAction("UseVehicle", throwIfNotFound: true);
+        m_Player_WeaponPrev = m_Player.FindAction("WeaponPrev", throwIfNotFound: true);
+        m_Player_WeaponNext = m_Player.FindAction("WeaponNext", throwIfNotFound: true);
     }
 
     ~@InputActions()
@@ -379,6 +421,8 @@ public partial class @InputActions: IInputActionCollection2, IDisposable
     private readonly InputAction m_Player_Crouch;
     private readonly InputAction m_Player_Walk;
     private readonly InputAction m_Player_UseVehicle;
+    private readonly InputAction m_Player_WeaponPrev;
+    private readonly InputAction m_Player_WeaponNext;
     /// <summary>
     /// Provides access to input actions defined in input action map "Player".
     /// </summary>
@@ -418,6 +462,14 @@ public partial class @InputActions: IInputActionCollection2, IDisposable
         /// Provides access to the underlying input action "Player/UseVehicle".
         /// </summary>
         public InputAction @UseVehicle => m_Wrapper.m_Player_UseVehicle;
+        /// <summary>
+        /// Provides access to the underlying input action "Player/WeaponPrev".
+        /// </summary>
+        public InputAction @WeaponPrev => m_Wrapper.m_Player_WeaponPrev;
+        /// <summary>
+        /// Provides access to the underlying input action "Player/WeaponNext".
+        /// </summary>
+        public InputAction @WeaponNext => m_Wrapper.m_Player_WeaponNext;
         /// <summary>
         /// Provides access to the underlying input action map instance.
         /// </summary>
@@ -465,6 +517,12 @@ public partial class @InputActions: IInputActionCollection2, IDisposable
             @UseVehicle.started += instance.OnUseVehicle;
             @UseVehicle.performed += instance.OnUseVehicle;
             @UseVehicle.canceled += instance.OnUseVehicle;
+            @WeaponPrev.started += instance.OnWeaponPrev;
+            @WeaponPrev.performed += instance.OnWeaponPrev;
+            @WeaponPrev.canceled += instance.OnWeaponPrev;
+            @WeaponNext.started += instance.OnWeaponNext;
+            @WeaponNext.performed += instance.OnWeaponNext;
+            @WeaponNext.canceled += instance.OnWeaponNext;
         }
 
         /// <summary>
@@ -497,6 +555,12 @@ public partial class @InputActions: IInputActionCollection2, IDisposable
             @UseVehicle.started -= instance.OnUseVehicle;
             @UseVehicle.performed -= instance.OnUseVehicle;
             @UseVehicle.canceled -= instance.OnUseVehicle;
+            @WeaponPrev.started -= instance.OnWeaponPrev;
+            @WeaponPrev.performed -= instance.OnWeaponPrev;
+            @WeaponPrev.canceled -= instance.OnWeaponPrev;
+            @WeaponNext.started -= instance.OnWeaponNext;
+            @WeaponNext.performed -= instance.OnWeaponNext;
+            @WeaponNext.canceled -= instance.OnWeaponNext;
         }
 
         /// <summary>
@@ -586,5 +650,19 @@ public partial class @InputActions: IInputActionCollection2, IDisposable
         /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
         /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
         void OnUseVehicle(InputAction.CallbackContext context);
+        /// <summary>
+        /// Method invoked when associated input action "WeaponPrev" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+        /// </summary>
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
+        void OnWeaponPrev(InputAction.CallbackContext context);
+        /// <summary>
+        /// Method invoked when associated input action "WeaponNext" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+        /// </summary>
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
+        void OnWeaponNext(InputAction.CallbackContext context);
     }
 }
