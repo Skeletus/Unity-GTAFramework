@@ -1647,7 +1647,6 @@ GameObject:
   - component: {fileID: 866316599}
   - component: {fileID: 866316602}
   - component: {fileID: 866316601}
-  - component: {fileID: 866316605}
   - component: {fileID: 866316606}
   m_Layer: 0
   m_Name: Player_
@@ -1847,22 +1846,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GTAFramework.Weapons.Components.WeaponAimer
   _thirdPersonCamera: {fileID: 330585548}
---- !u!114 &866316605
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 866316590}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 6fc8e59b7b2aa384896401139f661467, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::GTAFramework.Weapons.Components.WeaponAnimationBridge
-  _weaponInventory: {fileID: 866316599}
-  _animationAgent: {fileID: 866316594}
-  _pistolUpperBodyLayer: UpperBody_Pistol
-  _enableUpperBodyLayer: 1
 --- !u!114 &866316606
 MonoBehaviour:
   m_ObjectHideFlags: 0

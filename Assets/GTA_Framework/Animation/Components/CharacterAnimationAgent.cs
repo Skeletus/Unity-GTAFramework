@@ -1,4 +1,5 @@
 using UnityEngine;
+using System;
 using GTAFramework.GTA_Animation.Data;
 using GTAFramework.GTA_Animation.Modules;
 
@@ -22,6 +23,7 @@ namespace GTAFramework.GTA_Animation.Components
         private IAnimationModule _stance;
         private IAnimationModule _airborne;
         private IAnimationModule _locomotion;
+        private IAnimationModule _weaponStance;
 
         private AnimationBlackboard _bb;
 
@@ -86,10 +88,12 @@ namespace GTAFramework.GTA_Animation.Components
             _stance = new StanceModule();
             _airborne = new AirborneModule();
             _locomotion = new LocomotionModule();
+            _weaponStance = new WeaponStanceModule();
 
             _stance.Initialize(this);
             _airborne.Initialize(this);
             _locomotion.Initialize(this);
+            _weaponStance.Initialize(this);
 
             _bb = new AnimationBlackboard();
         }
@@ -116,6 +120,7 @@ namespace GTAFramework.GTA_Animation.Components
             _stance.Tick(dt, ref _bb, _driver);
             _airborne.Tick(dt, ref _bb, _driver);
             _locomotion.Tick(dt, ref _bb, _driver);
+            _weaponStance.Tick(dt, ref _bb, _driver);
         }
 
         public void LateTick(float dt)
@@ -126,8 +131,17 @@ namespace GTAFramework.GTA_Animation.Components
             _stance.LateTick(dt, ref _bb, _driver);
             _airborne.LateTick(dt, ref _bb, _driver);
             _locomotion.LateTick(dt, ref _bb, _driver);
+            _weaponStance.LateTick(dt, ref _bb, _driver);
 
             _bb.ResetOneFrameFlags();
+        }
+
+        private void OnDestroy()
+        {
+            DisposeModule(_stance);
+            DisposeModule(_airborne);
+            DisposeModule(_locomotion);
+            DisposeModule(_weaponStance);
         }
 
         private void BuildBlackboard(float dt)
@@ -156,6 +170,12 @@ namespace GTAFramework.GTA_Animation.Components
                 _bb.timeSinceGrounded += dt;
                 _bb.timeInAir += dt;
             }
+        }
+
+        private static void DisposeModule(IAnimationModule module)
+        {
+            if (module is IDisposable disposable)
+                disposable.Dispose();
         }
 
         public interface ICharacterAnimationSource
