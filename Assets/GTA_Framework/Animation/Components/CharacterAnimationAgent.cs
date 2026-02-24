@@ -142,6 +142,10 @@ namespace GTAFramework.GTA_Animation.Components
 
             _bb.jumpPressedThisFrame = _source.ConsumeJumpPressedThisFrame();
 
+            _bb.isAiming = _source.IsAiming;
+            _bb.moveX = _source.AimMoveX;
+            _bb.moveZ = _source.AimMoveZ;
+
             if (_bb.isGrounded)
             {
                 _bb.timeSinceGrounded = 0f;
@@ -162,6 +166,10 @@ namespace GTAFramework.GTA_Animation.Components
             bool IsMovementLocked { get; }
 
             float VerticalSpeed { get; }
+
+            bool IsAiming { get; }
+            float AimMoveX { get; }
+            float AimMoveZ { get; }
 
             // Bool one-frame desde gameplay (sin trigger de Animator)
             bool ConsumeJumpPressedThisFrame();

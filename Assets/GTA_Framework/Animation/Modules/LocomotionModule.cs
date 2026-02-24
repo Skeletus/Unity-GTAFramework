@@ -27,6 +27,10 @@ namespace GTAFramework.GTA_Animation.Modules
 
             // Vertical speed param (si lo usas en fall transitions)
             driver.SetFloat(driver.Ids.VerticalSpeed, bb.verticalSpeed);
+
+            driver.SetBool(driver.Ids.IsAiming, bb.isAiming);
+            driver.SetFloat(driver.Ids.MoveX, bb.moveX);
+            driver.SetFloat(driver.Ids.MoveZ, bb.moveZ);
         }
 
         public void LateTick(float dt, ref AnimationBlackboard bb, AnimatorDriver driver)

@@ -1,9 +1,9 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 
 namespace GTAFramework.GTA_Animation.Data
 {
     /// <summary>
-    /// Cachea hashes de parámetros para evitar StringToHash en runtime.
+    /// Cachea hashes de parametros para evitar StringToHash en runtime.
     /// </summary>
     public readonly struct AnimatorParamIds
     {
@@ -17,6 +17,13 @@ namespace GTAFramework.GTA_Animation.Data
         public readonly int IsFalling;
         public readonly int IsLanding;
 
+        // NUEVO: idle pistol
+        public readonly int IsPistolEquipped;
+
+        public readonly int IsAiming;
+        public readonly int MoveX;
+        public readonly int MoveZ;
+
         public AnimatorParamIds(CharacterAnimationConfig cfg)
         {
             Speed = Animator.StringToHash(cfg.speedParam);
@@ -27,6 +34,12 @@ namespace GTAFramework.GTA_Animation.Data
             IsJumping = Animator.StringToHash(cfg.isJumpingParam);
             IsFalling = Animator.StringToHash(cfg.isFallingParam);
             IsLanding = Animator.StringToHash(cfg.isLandingParam);
+
+            IsPistolEquipped = Animator.StringToHash(cfg.isPistolEquippedParam);
+
+            IsAiming = Animator.StringToHash(cfg.isAimingParam);
+            MoveX = Animator.StringToHash(cfg.moveXParam);
+            MoveZ = Animator.StringToHash(cfg.moveZParam);
         }
     }
 }

@@ -68,6 +68,9 @@ namespace GTAFramework.Player.Systems
                 _moveCommand.ResetVelocity();
             }
 
+            _playerController.IsAiming = _inputService.IsAimPressed;
+            _playerController.AimMovementInput = _inputService.MovementInput;
+
             // Gravedad/salto (vertical)
             _jumpCommand.Execute(deltaTime);
 
@@ -92,7 +95,7 @@ namespace GTAFramework.Player.Systems
 
         public void FixedTick(float fixedDeltaTime)
         {
-            // Intencionalmente vacío si ya aplicas todo en Tick(Update).
+            // Intencionalmente vacï¿½o si ya aplicas todo en Tick(Update).
         }
 
         public void Shutdown()
@@ -107,7 +110,7 @@ namespace GTAFramework.Player.Systems
                 InitializeCommands();
         }
 
-        // API pública útil para tests / IA / replay
+        // API pï¿½blica ï¿½til para tests / IA / replay
         public MoveCommand MoveCommand => _moveCommand;
         public RotateCommand RotateCommand => _rotateCommand;
         public JumpCommand JumpCommand => _jumpCommand;

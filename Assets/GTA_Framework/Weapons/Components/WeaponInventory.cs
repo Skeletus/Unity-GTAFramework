@@ -8,7 +8,7 @@ namespace GTAFramework.Weapons.Components
     /// Inventario simple de armas:
     /// - 1 arma por tipo (WeaponType)
     /// - Al recoger, reemplaza si ya existe ese tipo
-    /// - Equipa automáticamente el arma recogida
+    /// - Equipa automaticamente el arma recogida
     /// </summary>
     [DisallowMultipleComponent]
     public class WeaponInventory : MonoBehaviour
@@ -21,6 +21,8 @@ namespace GTAFramework.Weapons.Components
 
         private int _currentIndex = -1;
         private GameObject _currentWeaponInstance;
+
+        public event System.Action<WeaponData> OnWeaponEquipped;
 
         public WeaponData CurrentWeapon
         {
@@ -76,7 +78,7 @@ namespace GTAFramework.Weapons.Components
         }
 
         /// <summary>
-        /// Equipa el arma siguiente de forma cíclica.
+        /// Equipa el arma siguiente de forma ciclica.
         /// </summary>
         public void EquipNext()
         {
@@ -94,7 +96,7 @@ namespace GTAFramework.Weapons.Components
         }
 
         /// <summary>
-        /// Equipa el arma anterior de forma cíclica.
+        /// Equipa el arma anterior de forma ciclica.
         /// </summary>
         public void EquipPrevious()
         {
@@ -112,7 +114,7 @@ namespace GTAFramework.Weapons.Components
         }
 
         /// <summary>
-        /// Equipa un arma específica por tipo (si existe).
+        /// Equipa un arma especifica por tipo (si existe).
         /// </summary>
         public bool EquipByType(WeaponType type)
         {
@@ -138,6 +140,7 @@ namespace GTAFramework.Weapons.Components
             WeaponData data = _weaponsByType[type];
 
             SpawnWeaponModel(data);
+            OnWeaponEquipped?.Invoke(data);
         }
 
         private void SpawnWeaponModel(WeaponData data)

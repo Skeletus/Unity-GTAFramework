@@ -35,6 +35,19 @@ namespace GTAFramework.Player.Components
         public bool IsGrounded { get; private set; } // legacy alias (kept for other systems)
         public bool IsWalking { get; set; }
         public bool IsSprinting { get; set; }
+        public bool IsAiming { get; set; }
+        public Vector2 AimMovementInput { get; set; }
+
+        // ============================================================
+        // NUEVO: INPUT SMOOTHING PARA ANIMACIONES
+        // ============================================================
+        [Header("Animation Input Smoothing")]
+        [SerializeField, Range(0.01f, 0.3f)] 
+        private float aimInputSmoothTime = 0.1f;
+        
+        private Vector2 _smoothedAimInput = Vector2.zero;
+        private Vector2 _aimInputVelocity = Vector2.zero;
+        // ============================================================
 
         // Crouch delegated (getter) + legacy setter (no rompe compilación si alguien lo setea)
         public bool IsCrouching
@@ -91,6 +104,9 @@ namespace GTAFramework.Player.Components
         // ICharacterAnimationSource
         float CharacterAnimationAgent.ICharacterAnimationSource.VerticalSpeed => _verticalSpeed;
         bool CharacterAnimationAgent.ICharacterAnimationSource.IsMovementLocked => IsMovementLocked;
+        bool CharacterAnimationAgent.ICharacterAnimationSource.IsAiming => IsAiming;
+        float CharacterAnimationAgent.ICharacterAnimationSource.AimMoveX => _smoothedAimInput.x;
+        float CharacterAnimationAgent.ICharacterAnimationSource.AimMoveZ => _smoothedAimInput.y;
 
         bool CharacterAnimationAgent.ICharacterAnimationSource.ConsumeJumpPressedThisFrame()
         {
@@ -151,12 +167,37 @@ namespace GTAFramework.Player.Components
         private void Update()
         {
             _crouchSystem?.UpdateCollider();
-            
+            SmoothAimInput();
         }
 
         private void LateUpdate()
         {
             UpdateStateMachine();
+        }
+
+        private void SmoothAimInput()
+        {
+            // Obtener input crudo
+            Vector2 rawInput = AimMovementInput;
+            
+            // Suavizar con SmoothDamp (transición progresiva)
+            _smoothedAimInput.x = Mathf.SmoothDamp(
+                _smoothedAimInput.x,
+                rawInput.x,
+                ref _aimInputVelocity.x,
+                aimInputSmoothTime
+            );
+            
+            _smoothedAimInput.y = Mathf.SmoothDamp(
+                _smoothedAimInput.y,
+                rawInput.y,
+                ref _aimInputVelocity.y,
+                aimInputSmoothTime
+            );
+            
+            // Opcional: Deadzone para evitar micro-movimientos
+            if (Mathf.Abs(_smoothedAimInput.x) < 0.01f) _smoothedAimInput.x = 0f;
+            if (Mathf.Abs(_smoothedAimInput.y) < 0.01f) _smoothedAimInput.y = 0f;
         }
 
         // ========== STATE MACHINE ==========

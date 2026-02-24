@@ -16,8 +16,12 @@ namespace GTAFramework.Weapons.Components
         [SerializeField] private QueryTriggerInteraction _triggerInteraction = QueryTriggerInteraction.Ignore;
 
         [Header("Fire Origin")]
-        [Tooltip("Si esta asignado, el origen del raycast sera este. La direccion seguira la camara si se provee.")]
+        [Tooltip("Si esta asignado, el origen del raycast sera este.")]
         [SerializeField] private Transform _fireOriginOverride;
+
+        [Header("Aim Target")]
+        [Tooltip("Referencia de aim en el mundo (esfera). Si no se pasa un aimTarget, se usa este.")]
+        [SerializeField] private Transform _aimTarget;
 
         [Header("Debug")]
         [SerializeField] private bool _drawDebugRay = false;
@@ -28,7 +32,7 @@ namespace GTAFramework.Weapons.Components
         /// <summary>
         /// Intenta disparar. Requiere un arma de fuego equipada.
         /// </summary>
-        public bool TryShoot(WeaponData weapon, Transform fallbackAimOrigin, GameObject owner)
+        public bool TryShoot(WeaponData weapon, Transform fireOrigin, Transform aimTarget, GameObject owner)
         {
             if (weapon == null || !weapon.isFirearm)
                 return false;
@@ -41,17 +45,16 @@ namespace GTAFramework.Weapons.Components
 
             _nextShotTime = Time.time + (1f / weapon.fireRate);
 
-            Transform aimOrigin = fallbackAimOrigin != null ? fallbackAimOrigin : _fireOriginOverride;
-            Transform origin = _fireOriginOverride != null ? _fireOriginOverride : fallbackAimOrigin;
-
+            Transform origin = _fireOriginOverride != null ? _fireOriginOverride : fireOrigin;
             if (origin == null)
                 return false;
 
-            Vector3 direction = aimOrigin != null ? aimOrigin.forward : origin.forward;
+            Transform finalAimTarget = aimTarget != null ? aimTarget : _aimTarget;
+            Vector3 direction = GetAimDirection(origin, finalAimTarget, fireOrigin);
             Vector3 start = origin.position;
 
             if (_drawDebugRay)
-                Debug.DrawRay(start, direction.normalized * weapon.range, Color.red, _debugRayDuration);
+                Debug.DrawRay(start, direction * weapon.range, Color.red, _debugRayDuration);
 
             if (Physics.Raycast(start, direction, out RaycastHit hit, weapon.range, _hitMask, _triggerInteraction))
             {
@@ -63,6 +66,21 @@ namespace GTAFramework.Weapons.Components
             }
 
             return true;
+        }
+
+        private static Vector3 GetAimDirection(Transform origin, Transform aimTarget, Transform fallbackForward)
+        {
+            if (aimTarget != null)
+            {
+                Vector3 toTarget = aimTarget.position - origin.position;
+                if (toTarget.sqrMagnitude > 0.0001f)
+                    return toTarget.normalized;
+            }
+
+            if (fallbackForward != null)
+                return fallbackForward.forward.normalized;
+
+            return origin.forward.normalized;
         }
     }
 }

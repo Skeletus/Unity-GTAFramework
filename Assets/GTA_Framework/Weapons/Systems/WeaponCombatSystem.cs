@@ -12,7 +12,7 @@ namespace GTAFramework.Weapons.Systems
     /// Sistema de combate con armas de fuego:
     /// - Apuntado (hold)
     /// - Disparo (hold) con cadencia
-    /// - Hitscan + daño
+    /// - Hitscan + dano
     /// </summary>
     [AutoRegister(Priority = 9, StartActive = true)]
     public class WeaponCombatSystem : IGameSystem
@@ -64,12 +64,13 @@ namespace GTAFramework.Weapons.Systems
             // Disparo
             if (_aimer.IsAiming && _inputService.IsShootPressed && _shooter != null)
             {
-                Transform aimOrigin = GetAimOrigin();
-                _shooter.TryShoot(currentWeapon, aimOrigin, _playerController != null ? _playerController.gameObject : null);
+                Transform fireOrigin = GetFireOrigin();
+                GameObject owner = _playerController != null ? _playerController.gameObject : null;
+                _shooter.TryShoot(currentWeapon, fireOrigin, null, owner);
             }
         }
 
-        private Transform GetAimOrigin()
+        private Transform GetFireOrigin()
         {
             if (_playerController != null && _playerController.CameraTransform != null)
                 return _playerController.CameraTransform;

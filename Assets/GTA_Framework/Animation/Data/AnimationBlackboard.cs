@@ -13,7 +13,7 @@ namespace GTAFramework.GTA_Animation.Data
         public bool isGrounded;
         public bool isCrouching;
 
-        // NUEVO: útil para landing lock
+        // NUEVO: ï¿½til para landing lock
         public bool isMovementLocked;
 
         // Input one-frame
@@ -21,6 +21,10 @@ namespace GTAFramework.GTA_Animation.Data
 
         public float timeSinceGrounded;
         public float timeInAir;
+
+        public bool isAiming;
+        public float moveX;
+        public float moveZ;
 
         public void ResetOneFrameFlags()
         {

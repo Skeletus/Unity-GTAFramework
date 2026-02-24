@@ -15,7 +15,12 @@ MonoBehaviour:
   weaponName: Pistol
   type: 1
   weaponPrefab: {fileID: 7964396917078906551, guid: bae197e6b2186f64e817836880d5c00f, type: 3}
-  useCustomPose: 0
-  localPosition: {x: 0, y: 0, z: 0}
-  localEulerAngles: {x: 0, y: 0, z: 0}
-  localScale: {x: 1, y: 1, z: 1}
+  isFirearm: 1
+  damage: 20
+  fireRate: 6
+  range: 60
+  aimMoveSpeedMultiplier: 0.6
+  useCustomPose: 1
+  localPosition: {x: 0.04, y: 0.06, z: -0.15}
+  localEulerAngles: {x: -0.3, y: 0, z: 0}
+  localScale: {x: 1.16, y: 1.16, z: 1.16}
