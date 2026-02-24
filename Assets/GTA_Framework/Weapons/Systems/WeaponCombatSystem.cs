@@ -4,6 +4,7 @@ using GTAFramework.Core.Interfaces;
 using GTAFramework.Core.Services;
 using GTAFramework.Player.Components;
 using GTAFramework.Weapons.Components;
+using GTAFramework.Weapons.Interfaces;
 using GTAFramework.Weapons.Data;
 
 namespace GTAFramework.Weapons.Systems
@@ -19,9 +20,9 @@ namespace GTAFramework.Weapons.Systems
     {
         public bool IsActive { get; set; } = true;
 
-        [Inject] private InputService _inputService;
+        private InputService _inputService;
 
-        private WeaponInventory _inventory;
+        private IWeaponInventory _inventory;
         private WeaponAimer _aimer;
         private WeaponShooter _shooter;
         private PlayerController _playerController;
@@ -29,7 +30,6 @@ namespace GTAFramework.Weapons.Systems
         public void Initialize()
         {
             _inputService = DIContainer.Instance.Resolve<InputService>();
-
             _inventory = Object.FindFirstObjectByType<WeaponInventory>();
             _aimer = Object.FindFirstObjectByType<WeaponAimer>();
             _shooter = Object.FindFirstObjectByType<WeaponShooter>();
@@ -86,3 +86,5 @@ namespace GTAFramework.Weapons.Systems
         public void Shutdown() { }
     }
 }
+
+

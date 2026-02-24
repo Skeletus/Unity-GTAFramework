@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using UnityEngine;
+using GTAFramework.Weapons.Interfaces;
 
 namespace GTAFramework.Weapons.Components
 {
@@ -7,7 +8,7 @@ namespace GTAFramework.Weapons.Components
     /// Mantiene las armas cercanas y permite interactuar con la mejor candidata.
     /// </summary>
     [DisallowMultipleComponent]
-    public class WeaponInteractor : MonoBehaviour
+    public class WeaponInteractor : MonoBehaviour, IWeaponPicker
     {
         [Header("Settings")]
         [SerializeField, Min(0.1f)] private float _maxPickupDistance = 2.5f;
@@ -34,7 +35,7 @@ namespace GTAFramework.Weapons.Components
         /// <summary>
         /// Intenta recoger la mejor arma disponible (más cercana).
         /// </summary>
-        public bool TryPickup(WeaponInventory inventory)
+        public bool TryPickup(IWeaponInventory inventory)
         {
             if (inventory == null)
                 return false;
@@ -84,3 +85,4 @@ namespace GTAFramework.Weapons.Components
         }
     }
 }
+

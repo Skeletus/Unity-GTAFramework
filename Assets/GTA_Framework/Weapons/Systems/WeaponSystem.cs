@@ -1,15 +1,17 @@
 ﻿using UnityEngine;
 using GTAFramework.Core.Container;
 using GTAFramework.Core.Interfaces;
-using GTAFramework.Core.Services;
+using GTAFramework.Weapons.Interfaces;
+using GTAFramework.Weapons.Services;
 using GTAFramework.Weapons.Components;
+using GTAFramework.Core.Services;
 
 namespace GTAFramework.Weapons.Systems
 {
     /// <summary>
     /// Sistema de armas:
-    /// - Lee input (New Input System) via InputService
-    /// - Interactúa con WeaponInteractor para recoger
+    /// - Lee input (New Input System) via IWeaponInputHandler
+    /// - Interactúa con IWeaponPicker para recoger
     /// - Cambia arma con Q/E de forma cíclica
     /// </summary>
     [AutoRegister(Priority = 14, StartActive = true)]
@@ -17,17 +19,19 @@ namespace GTAFramework.Weapons.Systems
     {
         public bool IsActive { get; set; } = true;
 
-        [Inject] private InputService _inputService;
+        private IWeaponInputHandler _inputHandler;
 
-        private WeaponInventory _inventory;
-        private WeaponInteractor _interactor;
+        private IWeaponInventory _inventory;
+        private IWeaponPicker _interactor;
 
         private bool _weaponPrevHeld;
         private bool _weaponNextHeld;
 
         public void Initialize()
         {
-            _inputService = DIContainer.Instance.Resolve<InputService>();
+            var inputService = DIContainer.Instance.Resolve<InputService>();
+            _inputHandler = new WeaponInputHandler(inputService);
+
             _inventory = Object.FindFirstObjectByType<WeaponInventory>();
             _interactor = Object.FindFirstObjectByType<WeaponInteractor>();
 
@@ -40,7 +44,7 @@ namespace GTAFramework.Weapons.Systems
 
         public void Tick(float deltaTime)
         {
-            if (_inputService == null || _inventory == null)
+            if (_inputHandler == null || _inventory == null)
                 return;
 
             HandleWeaponSwitching();
@@ -49,12 +53,12 @@ namespace GTAFramework.Weapons.Systems
 
         private void HandleWeaponSwitching()
         {
-            bool prevPressed = _inputService.IsWeaponPrevPressed;
+            bool prevPressed = _inputHandler.IsPrevWeaponPressed;
             if (prevPressed && !_weaponPrevHeld)
                 _inventory.EquipPrevious();
             _weaponPrevHeld = prevPressed;
 
-            bool nextPressed = _inputService.IsWeaponNextPressed;
+            bool nextPressed = _inputHandler.IsNextWeaponPressed;
             if (nextPressed && !_weaponNextHeld)
                 _inventory.EquipNext();
             _weaponNextHeld = nextPressed;
@@ -62,12 +66,12 @@ namespace GTAFramework.Weapons.Systems
 
         private void HandlePickup()
         {
-            if (!_inputService.IsInteractPressed)
+            if (!_inputHandler.IsInteractPressed)
                 return;
 
             // Solo consumimos el input si realmente recogimos algo.
             if (_interactor != null && _interactor.TryPickup(_inventory))
-                _inputService.IsInteractPressed = false;
+                _inputHandler.ConsumeInteract();
         }
 
         public void LateTick(float deltaTime) { }
@@ -75,3 +79,9 @@ namespace GTAFramework.Weapons.Systems
         public void Shutdown() { }
     }
 }
+
+
+
+
+
+

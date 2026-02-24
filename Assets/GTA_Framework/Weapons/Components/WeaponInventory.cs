@@ -1,6 +1,8 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using UnityEngine;
 using GTAFramework.Weapons.Data;
+using GTAFramework.Weapons.Interfaces;
 
 namespace GTAFramework.Weapons.Components
 {
@@ -11,7 +13,7 @@ namespace GTAFramework.Weapons.Components
     /// - Equipa automaticamente el arma recogida
     /// </summary>
     [DisallowMultipleComponent]
-    public class WeaponInventory : MonoBehaviour
+    public class WeaponInventory : MonoBehaviour, IWeaponInventory
     {
         [Header("References")]
         [SerializeField] private Transform _weaponHolder;
@@ -22,7 +24,7 @@ namespace GTAFramework.Weapons.Components
         private int _currentIndex = -1;
         private GameObject _currentWeaponInstance;
 
-        public event System.Action<WeaponData> OnWeaponEquipped;
+        public event Action<WeaponData> OnWeaponEquipped;
 
         public WeaponData CurrentWeapon
         {
@@ -174,3 +176,5 @@ namespace GTAFramework.Weapons.Components
         }
     }
 }
+
+

@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 using GTAFramework.Weapons.Data;
+using GTAFramework.Weapons.Interfaces;
 
 namespace GTAFramework.Weapons.Components
 {
@@ -54,7 +55,7 @@ namespace GTAFramework.Weapons.Components
                 interactor.RegisterPickup(this);
 
             // Auto-pickup solo si el jugador no tiene un arma de este tipo.
-            var inventory = other.GetComponentInParent<WeaponInventory>();
+            var inventory = other.GetComponentInParent<IWeaponInventory>();
             if (inventory == null)
                 return;
 
@@ -82,9 +83,9 @@ namespace GTAFramework.Weapons.Components
         }
 
         /// <summary>
-        /// Intenta ser recogida por un WeaponInventory.
+        /// Intenta ser recogida por un IWeaponInventory.
         /// </summary>
-        public bool TryPickup(WeaponInventory inventory)
+        public bool TryPickup(IWeaponInventory inventory)
         {
             if (!IsAvailable || inventory == null)
                 return false;
@@ -130,3 +131,4 @@ namespace GTAFramework.Weapons.Components
         }
     }
 }
+
