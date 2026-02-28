@@ -154,10 +154,6 @@ namespace GTAFramework.Player.Components
 
         private void Start()
         {
-            var thirdPersonCamera = FindFirstObjectByType<GTAFramework.GTACamera.Components.ThirdPersonCamera>();
-            if (thirdPersonCamera != null)
-                SetCameraTransform(thirdPersonCamera.transform);
-
             // Ensure first frame has correct grounded state even before any move
             _groundProbeSystem?.UpdateGrounding(_verticalSpeed, IsMovementLocked);
             IsGrounded = IsGroundedContact;
@@ -295,11 +291,6 @@ namespace GTAFramework.Player.Components
             IsGrounded = IsGroundedContact; // legacy alias (kept for other systems)
 
             RefreshCanJump();
-        }
-
-        public void SetCameraTransform(Transform cameraTransform)
-        {
-            _cameraTransform = cameraTransform;
         }
 
         public void LockMovement(bool locked)
