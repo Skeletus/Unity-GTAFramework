@@ -2123,8 +2123,12 @@ MonoBehaviour:
   _aimGamepadSensitivity: 1
   _mouseRaycastMask:
     serializedVersion: 2
-    m_Bits: 1
+    m_Bits: 247
   _mouseWorldDebugTransform: {fileID: 318885685}
+  _hitEffect: {fileID: 4021103657954561961, guid: 5c755f9bc5253ea418e919994537dcc7, type: 3}
+  _shootHitMask:
+    serializedVersion: 2
+    m_Bits: 1
 --- !u!1 &895399744
 GameObject:
   m_ObjectHideFlags: 0

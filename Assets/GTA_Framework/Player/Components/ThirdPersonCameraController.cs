@@ -49,8 +49,16 @@ public class ThirdPersonCameraController : MonoBehaviour
     [Tooltip("Optional transform to move to the current mouse world hit point")]
     [SerializeField] private Transform _mouseWorldDebugTransform;
 
+    [Header("Shooting")]
+    [Tooltip("Particle effect prefab instantiated when a valid bullet target is hit")]
+    [SerializeField] private GameObject _hitEffect;
+
+    [Tooltip("Layer mask used by shooting hitscan")]
+    [SerializeField] private LayerMask _shootHitMask = ~0;
+
     // Track previous aim state to detect changes
     private bool _wasAiming;
+    private bool _wasShooting;
 
     // Store original priorities
     private int _normalCameraOriginalPriority = 0;
@@ -60,6 +68,7 @@ public class ThirdPersonCameraController : MonoBehaviour
     private float _cinemachineTargetYaw;
     private float _cinemachineTargetPitch;
     private Vector3 _mouseWorldPosition;
+    private bool _hasMouseWorldPosition;
 
     public Vector3 MouseWorldPosition => _mouseWorldPosition;
 
@@ -111,6 +120,7 @@ public class ThirdPersonCameraController : MonoBehaviour
         HandleCameraSwitch();
         CameraRotation();
         UpdateMouseWorldPosition();
+        HandleShooting();
     }
 
     private void HandleCameraSwitch()
@@ -197,9 +207,46 @@ public class ThirdPersonCameraController : MonoBehaviour
         if (Physics.Raycast(mouseRay, out RaycastHit hitInfo, Mathf.Infinity, _mouseRaycastMask, QueryTriggerInteraction.Ignore))
         {
             _mouseWorldPosition = hitInfo.point;
+            _hasMouseWorldPosition = true;
 
             if (_mouseWorldDebugTransform != null)
                 _mouseWorldDebugTransform.position = _mouseWorldPosition;
+        }
+        else
+        {
+            _hasMouseWorldPosition = false;
+        }
+    }
+
+    private void HandleShooting()
+    {
+        if (_inputService == null)
+            return;
+
+        bool isShooting = _inputService.IsShootPressed;
+        bool shootPressedThisFrame = isShooting && !_wasShooting;
+        _wasShooting = isShooting;
+
+        if (!shootPressedThisFrame || !_hasMouseWorldPosition)
+            return;
+
+        Camera worldCamera = Camera.main;
+        if (worldCamera == null)
+            return;
+
+        Vector3 rayOrigin = worldCamera.transform.position;
+        Vector3 rayDirection = (_mouseWorldPosition - rayOrigin).normalized;
+        if (rayDirection.sqrMagnitude <= Mathf.Epsilon)
+            return;
+
+        if (Physics.Raycast(rayOrigin, rayDirection, out RaycastHit hitInfo, Mathf.Infinity, _shootHitMask, QueryTriggerInteraction.Ignore))
+        {
+            BulletTarget bulletTarget = hitInfo.collider.GetComponentInParent<BulletTarget>();
+            if (bulletTarget != null && _hitEffect != null)
+            {
+                Quaternion hitRotation = Quaternion.LookRotation(hitInfo.normal);
+                Instantiate(_hitEffect, hitInfo.point, hitRotation);
+            }
         }
     }
 
