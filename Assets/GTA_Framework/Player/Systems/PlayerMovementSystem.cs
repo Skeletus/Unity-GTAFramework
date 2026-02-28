@@ -53,6 +53,11 @@ namespace GTAFramework.Player.Systems
             if (_playerController == null || _inputService == null)
                 return;
 
+            bool isAiming = _inputService.IsAimPressed;
+            _inputService.IsAiming = isAiming;
+            _playerController.IsAiming = isAiming;
+            _playerController.AimMovementInput = _inputService.MovementInput;
+
             // Capturar request de salto (solo si grounded stable) tal como antes
             if (_inputService.IsJumpPressed && _playerController.IsGroundedStable)
                 _jumpCommand.RequestJump();
@@ -67,9 +72,6 @@ namespace GTAFramework.Player.Systems
             {
                 _moveCommand.ResetVelocity();
             }
-
-            _playerController.IsAiming = _inputService.IsAimPressed;
-            _playerController.AimMovementInput = _inputService.MovementInput;
 
             // Gravedad/salto (vertical)
             _jumpCommand.Execute(deltaTime);
