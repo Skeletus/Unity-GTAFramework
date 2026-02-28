@@ -2,6 +2,7 @@ using UnityEngine;
 using GTAFramework.Core.Container;
 using GTAFramework.Core.Services;
 using Unity.Cinemachine;
+using UnityEngine.InputSystem;
 
 public class ThirdPersonCameraController : MonoBehaviour
 {
@@ -34,6 +35,20 @@ public class ThirdPersonCameraController : MonoBehaviour
     [Tooltip("Priority to set when aiming")]
     [SerializeField] private int _aimPriority = 10;
 
+    [Header("Aim Sensitivity")]
+    [Tooltip("Sensitivity for mouse input while aiming")]
+    [SerializeField] private float _aimMouseSensitivity = 0.5f;
+
+    [Tooltip("Sensitivity for gamepad/controller input while aiming")]
+    [SerializeField] private float _aimGamepadSensitivity = 1.0f;
+
+    [Header("Mouse Raycast")]
+    [Tooltip("Layer mask used to raycast from mouse position into the world")]
+    [SerializeField] private LayerMask _mouseRaycastMask = ~0;
+
+    [Tooltip("Optional transform to move to the current mouse world hit point")]
+    [SerializeField] private Transform _mouseWorldDebugTransform;
+
     // Track previous aim state to detect changes
     private bool _wasAiming;
 
@@ -44,6 +59,9 @@ public class ThirdPersonCameraController : MonoBehaviour
     // Cinemachine target values
     private float _cinemachineTargetYaw;
     private float _cinemachineTargetPitch;
+    private Vector3 _mouseWorldPosition;
+
+    public Vector3 MouseWorldPosition => _mouseWorldPosition;
 
     // Input reference
     [Inject] private InputService _inputService;
@@ -92,6 +110,7 @@ public class ThirdPersonCameraController : MonoBehaviour
     {
         HandleCameraSwitch();
         CameraRotation();
+        UpdateMouseWorldPosition();
     }
 
     private void HandleCameraSwitch()
@@ -135,12 +154,17 @@ public class ThirdPersonCameraController : MonoBehaviour
 
         // Get the look input from InputService
         Vector2 lookInput = _inputService.LookInput;
+        bool isAiming = _inputService.IsAimPressed;
 
         // If there is an input and camera position is not fixed
         if (lookInput.sqrMagnitude >= _threshold && !LockCameraPosition)
         {
             // Determine sensitivity based on input device
-            float sensitivity = IsCurrentDeviceMouse ? MouseSensitivity : GamepadSensitivity;
+            float sensitivity;
+            if (IsCurrentDeviceMouse)
+                sensitivity = isAiming ? _aimMouseSensitivity : MouseSensitivity;
+            else
+                sensitivity = isAiming ? _aimGamepadSensitivity : GamepadSensitivity;
 
             // Don't multiply mouse input by Time.deltaTime
             float deltaTimeMultiplier = IsCurrentDeviceMouse ? 1.0f : Time.deltaTime;
@@ -159,6 +183,24 @@ public class ThirdPersonCameraController : MonoBehaviour
             _cinemachineTargetYaw,
             0.0f
         );
+    }
+
+    private void UpdateMouseWorldPosition()
+    {
+        Camera worldCamera = Camera.main;
+        if (worldCamera == null || Mouse.current == null)
+            return;
+
+        Vector2 mouseScreenPosition = Mouse.current.position.ReadValue();
+        Ray mouseRay = worldCamera.ScreenPointToRay(mouseScreenPosition);
+
+        if (Physics.Raycast(mouseRay, out RaycastHit hitInfo, Mathf.Infinity, _mouseRaycastMask, QueryTriggerInteraction.Ignore))
+        {
+            _mouseWorldPosition = hitInfo.point;
+
+            if (_mouseWorldDebugTransform != null)
+                _mouseWorldDebugTransform.position = _mouseWorldPosition;
+        }
     }
 
     /// <summary>
