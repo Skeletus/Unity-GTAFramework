@@ -93,7 +93,7 @@ public class ThirdPersonCameraController : MonoBehaviour
         {
             // You can implement device detection based on your InputSystem configuration
             // For now, we'll use a simple approach
-            return false;
+            return true;
         }
     }
 

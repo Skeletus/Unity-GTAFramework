@@ -126,7 +126,11 @@ namespace GTAFramework.Core.Services
 
         private void OnAim(InputAction.CallbackContext context)
         {
-            IsAimPressed = context.ReadValueAsButton();
+            // Toggle: un click activa, otro click desactiva
+            if (context.performed)
+            {
+                IsAimPressed = !IsAimPressed;
+            }
         }
 
         private void OnShoot(InputAction.CallbackContext context)
