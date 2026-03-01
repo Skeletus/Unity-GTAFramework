@@ -22,5 +22,5 @@ MonoBehaviour:
   aimMoveSpeedMultiplier: 0.6
   useCustomPose: 1
   localPosition: {x: 0.04, y: 0.06, z: -0.15}
-  localEulerAngles: {x: -0.3, y: 0, z: 0}
+  localEulerAngles: {x: -13.47, y: 3.84, z: -0.89}
   localScale: {x: 1.16, y: 1.16, z: 1.16}

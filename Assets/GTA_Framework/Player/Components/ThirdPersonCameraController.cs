@@ -3,6 +3,7 @@ using GTAFramework.Core.Container;
 using GTAFramework.Core.Services;
 using Unity.Cinemachine;
 using UnityEngine.InputSystem;
+using UnityEngine.Animations.Rigging;
 
 public class ThirdPersonCameraController : MonoBehaviour
 {
@@ -55,6 +56,13 @@ public class ThirdPersonCameraController : MonoBehaviour
 
     [Tooltip("Layer mask used by shooting hitscan")]
     [SerializeField] private LayerMask _shootHitMask = ~0;
+
+    [Header("Aim Rig")]
+    [Tooltip("Animation Rigging rig used while aiming")]
+    [SerializeField] private Rig _aimRig;
+
+    [Tooltip("Current target weight for aim rig (1 when aiming, 0 when not aiming)")]
+    [SerializeField, Range(0f, 1f)] private float _aimRigWeight;
 
     // Track previous aim state to detect changes
     private bool _wasAiming;
@@ -118,6 +126,7 @@ public class ThirdPersonCameraController : MonoBehaviour
     private void LateUpdate()
     {
         HandleCameraSwitch();
+        HandleAimRig();
         CameraRotation();
         UpdateMouseWorldPosition();
         HandleShooting();
@@ -193,6 +202,15 @@ public class ThirdPersonCameraController : MonoBehaviour
             _cinemachineTargetYaw,
             0.0f
         );
+    }
+
+    private void HandleAimRig()
+    {
+        bool isAiming = _inputService?.IsAimPressed ?? false;
+        _aimRigWeight = isAiming ? 1f : 0f;
+
+        if (_aimRig != null)
+            _aimRig.weight = Mathf.Lerp(_aimRig.weight, _aimRigWeight, Time.deltaTime * 10f);
     }
 
     private void UpdateMouseWorldPosition()
