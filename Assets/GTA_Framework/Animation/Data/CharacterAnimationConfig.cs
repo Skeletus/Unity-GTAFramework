@@ -21,6 +21,7 @@ namespace GTAFramework.GTA_Animation.Data
 
         // NUEVO: idle pistol
         public string isPistolEquippedParam = "IsPistolEquipped";
+        public string isRifleEquippedParam = "IsRifleEquipped";
 
         public string isAimingParam = "IsAiming";
         public string moveXParam = "MoveX";

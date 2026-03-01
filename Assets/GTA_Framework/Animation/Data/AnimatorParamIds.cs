@@ -19,6 +19,7 @@ namespace GTAFramework.GTA_Animation.Data
 
         // NUEVO: idle pistol
         public readonly int IsPistolEquipped;
+        public readonly int IsRifleEquipped;
 
         public readonly int IsAiming;
         public readonly int MoveX;
@@ -36,6 +37,7 @@ namespace GTAFramework.GTA_Animation.Data
             IsLanding = Animator.StringToHash(cfg.isLandingParam);
 
             IsPistolEquipped = Animator.StringToHash(cfg.isPistolEquippedParam);
+            IsRifleEquipped = Animator.StringToHash(cfg.isRifleEquippedParam);
 
             IsAiming = Animator.StringToHash(cfg.isAimingParam);
             MoveX = Animator.StringToHash(cfg.moveXParam);
